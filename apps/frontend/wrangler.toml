@@ -1,0 +1,15 @@
+name = "pg-cbc-endes"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-03-26"
+
+[vars]
+VITE_API_BASE_URL = "http://localhost:8787"
+VITE_ENVIRONMENT = "dev"
+
+[env.preview]
+name = "pg-cbc-endes-preview"
+vars = { VITE_API_BASE_URL = "http://localhost:8787", VITE_ENVIRONMENT = "preview" }
+
+[env.production]
+name = "pg-cbc-endes"
+vars = { VITE_API_BASE_URL = "https://worker-cbc-endes-dev.workers.dev", VITE_ENVIRONMENT = "production" }
