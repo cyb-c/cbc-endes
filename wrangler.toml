@@ -1,0 +1,9 @@
+# Wrangler Configuration for cbc-endes
+# Versión: 4.75.0
+
+name = "cbc-endes"
+compatibility_date = "2026-03-26"
+
+# Environment: dev
+[env.dev]
+name = "cbc-endes-dev"

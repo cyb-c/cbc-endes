@@ -1,0 +1,16 @@
+name = "worker-cbc-endes"
+main = "src/index.ts"
+compatibility_date = "2026-03-26"
+compatibility_flags = ["nodejs_compat"]
+
+[env.dev]
+name = "worker-cbc-endes-dev"
+
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "cbc-endes-db-test"
+database_id = "22892bef-3878-4ef0-bd7d-d28bc9656914"
+
+[[env.dev.r2_buckets]]
+binding = "BUCKET"
+bucket_name = "cbc-endes-storage-test"

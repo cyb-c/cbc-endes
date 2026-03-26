@@ -1,8 +1,9 @@
 # Inventario de Recursos y Configuración
 
-> **Finalidad:** Fuente única de verdad para recursos Cloudflare, CI/CD, bindings, variables de entorno y configuración operativa del proyecto.  
-> **Versión:** 5.0  
+> **Finalidad:** Fuente única de verdad para recursos Cloudflare, CI/CD, bindings, variables de entorno y configuración operativa del proyecto.
+> **Versión:** 5.1
 > **Importante:** Este archivo es gestionado exclusivamente por el agente `inventariador`. Las modificaciones directas serán rechazadas.
+> **Última actualización:** 2026-03-26 (Fase 1 completada)
 
 ---
 
@@ -32,13 +33,14 @@
 
 | Campo | Valor |
 |-------|-------|
-| **Nombre del proyecto** | [Nombre del proyecto] |
-| **Finalidad** | [Descripción breve del propósito] |
-| **Entorno de trabajo** | [VS Code, GitHub Codespaces, etc.] |
-| **Lenguaje base** | [TypeScript, JavaScript, etc.] |
-| **Entornos de despliegue** | [dev, staging, production] |
-| **CI/CD y GitHub Secrets** | [Por definir / Configurado] |
-| **Estructura del proyecto** | [Código en raíz / apps/, packages/] |
+| **Nombre del proyecto** | `cbc-endes` |
+| **Finalidad** | Gestor de proyectos de análisis inmobiliarios que ejecuta prompts contra IA mediante API |
+| **Entorno de trabajo** | GitHub Codespaces |
+| **Lenguaje base** | TypeScript |
+| **Entornos de despliegue** | dev (preview), production |
+| **CI/CD y GitHub Secrets** | GitHub Secrets configurados (CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID) |
+| **Estructura del proyecto** | Monorepo (`apps/worker`, `apps/frontend`) |
+| **Repositorio GitHub** | https://github.com/cyb-c/cbc-endes |
 
 ---
 
@@ -46,9 +48,10 @@
 
 | Secret | Uso | Consume | Estado |
 |--------|-----|---------|--------|
-| `CF_API_TOKEN` | Token para API de Cloudflare | GitHub Actions / wrangler | 🔲 |
-| `CF_ACCOUNT_ID` | Identificador de cuenta para despliegues | GitHub Actions / wrangler | 🔲 |
-| `[AGREGAR]` | [Descripción] | [Worker/Service] | 🔲 |
+| `CLOUDFLARE_API_TOKEN` | Token para API de Cloudflare | Wrangler CLI | ✅ |
+| `CLOUDFLARE_ACCOUNT_ID` | Identificador de cuenta para despliegues | Wrangler CLI | ✅ |
+
+**Account ID:** `ef640df5accdc7355f5892983d5ef05d`
 
 > **Nota:** Los valores de secrets nunca se documentan en este archivo. Usar `wrangler secret put` para gestión local.
 
@@ -60,13 +63,14 @@
 
 | Variable | Uso | Sensible | Estado |
 |----------|-----|----------|--------|
-| `[VAR_NAME]` | [Descripción del uso] | Sí | 🔲 |
+| *Por definir* | Variables para integraciones externas (IA) | Sí | 🔲 |
 
 ### 3.2. Frontend (`.env`)
 
 | Variable | Uso | Sensible | Estado |
 |----------|-----|----------|--------|
-| `[VAR_NAME]` | [Descripción del uso] | Sí | 🔲 |
+| `VITE_API_BASE_URL` | URL base de la API backend | No | ✅ |
+| `VITE_ENVIRONMENT` | Entorno de ejecución | No | ✅ |
 
 > **Nota:** Usar `.dev.vars.example` y `.env.example` como plantillas versionadas sin valores reales.
 
@@ -78,61 +82,80 @@
 
 | Nombre | Binding | App/Proyecto | Puerto Dev | Estado CF | Último Deploy |
 |--------|---------|--------------|------------|-----------|---------------|
-| `[WORKER_NAME]` | `[BINDING]` | [Proyecto] | [8787] | 🔲 | [YYYY-MM-DD] |
+| `worker-cbc-endes` | N/A | Backend API | 8787 | ✅ | 2026-03-26 |
+| `worker-cbc-endes-dev` | N/A | Backend API (dev) | 8787 | ✅ | 2026-03-26 |
 
 ### 4.2 KV Namespaces
 
 | Nombre en CF | ID | Binding | App | Estado |
 |--------------|----|---------|-----|--------|
-| `[NOMBRE_KV]` | [ID] | [BINDING_NAME] | [Worker/App] | 🔲 |
-
-**Keys en `[NOMBRE_KV]`**
-
-| Key | Descripción | Estado |
-|-----|-------------|--------|
-| `[KEY_NAME]` | [Propósito de la key] | 🔲 |
+| *Sin KV configurado* | - | - | - | - |
 
 ### 4.3 Bases de Datos (D1)
 
 | Nombre | Binding | App | ID | Estado |
 |--------|---------|-----|----|--------|
-| `[DB_NAME]` | [BINDING] | [Worker] | [ID] | 🔲 |
+| `cbc-endes-db-test` | DB | worker-cbc-endes | `22892bef-3878-4ef0-bd7d-d28bc9656914` | ✅ |
+
+**Migraciones aplicadas:**
+
+| Migración | Archivo | Estado |
+|-----------|---------|--------|
+| 001-initial | `migrations/001-initial.sql` | ✅ Aplicada |
+
+**Tablas existentes:**
+- `d1_migrations` - Control de versiones de migraciones
+- `test_items` - Tabla de prueba (datos de demostración)
 
 ### 4.4 Buckets R2
 
 | Nombre | Binding | App | Estado |
 |--------|---------|-----|--------|
-| `[BUCKET_NAME]` | [BINDING] | [Worker] | 🔲 |
+| `cbc-endes-storage-test` | BUCKET | worker-cbc-endes | ✅ |
+
+**Configuración:**
+- Storage class: Standard
+- Location: WEUR (Western Europe)
+- CORS: Permitido desde `http://localhost:5173` y `https://pg-cbc-endes.pages.dev`
 
 ### 4.5 Queues
 
 | Nombre | Binding (Productor) | Binding (Consumidor) | App | Estado |
 |--------|---------------------|----------------------|-----|--------|
-| `[QUEUE_NAME]` | [PRODUCER_BINDING] | [CONSUMER_BINDING] | [Worker] | 🔲 |
+| *Sin colas configuradas* | - | - | - | - |
 
 ### 4.6 Workflows
 
 | Nombre | Binding | Clase | Worker Asociado | Estado |
 |--------|---------|-------|-----------------|--------|
-| `[WORKFLOW_NAME]` | [BINDING] | [CLASS_NAME] | [WORKER] | 🔲 |
+| *Sin workflows configurados* | - | - | - | - |
+
+**Nota:** Workflows se implementarán en Fase 2 (definición y diseño).
 
 ### 4.7 Workers AI
 
 | Binding | Modelo | App | Estado |
 |---------|--------|-----|--------|
-| `[AI_BINDING]` | [Modelo] | [Worker] | 🔲 |
+| *Sin AI configurado* | - | - | - |
+
+**Nota:** Integración con IA se planificará en Fase 2.
 
 ### 4.8 Vectorize (opcional)
 
 | Nombre | Binding | Dimensiones | Métrica | Estado |
 |--------|---------|-------------|---------|--------|
-| `[VECTORIZE_NAME]` | [BINDING] | [1536] | [cosine] | 🔲 |
+| *Sin Vectorize configurado* | - | - | - | - |
 
 ### 4.9 Cloudflare Pages / Frontend
 
 | Proyecto | URL | App Asociada | Proveedor Git | Estado |
 |----------|-----|--------------|---------------|--------|
-| `[PAGES_NAME]` | [URL] | [APP] | [GitHub/GitLab] | 🔲 |
+| `pg-cbc-endes` | https://d00e4cdb.pg-cbc-endes.pages.dev/ | TailAdmin React | GitHub | ✅ |
+
+**Configuración:**
+- Production branch: `main`
+- Build output dir: `dist`
+- Framework: React + Vite + Tailwind CSS
 
 ---
 
@@ -140,27 +163,38 @@
 
 | Campo | Valor |
 |-------|-------|
-| **Uso de Wrangler** | [Sí/No] |
-| **Archivo de configuración** | [wrangler.toml / wrangler.jsonc] |
-| **Método de autenticación** | [GitHub Actions + wrangler-action / wrangler login / Manual] |
-| **Environments configurados** | [dev, staging, production] |
-| **account_id** | No documentado (resolver vía login) |
+| **Uso de Wrangler** | Sí |
+| **Archivo de configuración** | `wrangler.toml` (raíz + por app) |
+| **Método de autenticación** | API Token vía variables de entorno (GitHub Secrets) |
+| **Environments configurados** | dev, preview (Pages), production |
+| **account_id** | `ef640df5accdc7355f5892983d5ef05d` (inyectado vía entorno) |
+| **Wrangler versión** | 4.75.0 |
 
 ### 5.1 Bindings y Variables de Entorno (wrangler)
 
 | Clave o Binding | Tipo | Estado | Ubicación | Observaciones |
 |-----------------|------|--------|-----------|---------------|
-| `[BINDING_NAME]` | [KV/D1/R2/Queue/AI] | 🔲 | wrangler.toml/jsonc | [Descripción] |
+| `DB` | D1 Database | ✅ | `apps/worker/wrangler.toml` | Binding a `cbc-endes-db-test` |
+| `BUCKET` | R2 Bucket | ✅ | `apps/worker/wrangler.toml` | Binding a `cbc-endes-storage-test` |
+| `VITE_API_BASE_URL` | Variable frontend | ✅ | `apps/frontend/wrangler.toml` | URL de la API backend |
+| `VITE_ENVIRONMENT` | Variable frontend | ✅ | `apps/frontend/wrangler.toml` | Entorno de ejecución |
 
 ---
 
 ## 6. Variables de Entorno por App
 
-### `[Nombre de la App/Worker]`
+### `worker-cbc-endes` (Backend)
 
 | Variable | Tipo | Sensible | Descripción | Estado |
 |----------|------|----------|-------------|--------|
-| `[VAR_NAME]` | [String/Number/Boolean] | [Sí/No] | [Descripción] | 🔲 |
+| *Por definir* | String | Sí | Variables para integraciones externas | 🔲 |
+
+### `pg-cbc-endes` (Frontend Pages)
+
+| Variable | Tipo | Sensible | Descripción | Estado |
+|----------|------|----------|-------------|--------|
+| `VITE_API_BASE_URL` | String | No | URL base del backend API | ✅ |
+| `VITE_ENVIRONMENT` | String | No | Entorno (dev/preview/production) | ✅ |
 
 ---
 
@@ -168,16 +202,9 @@
 
 | Servicio | Propósito | Variables Requeridas | Estado |
 |----------|-----------|---------------------|--------|
-| `[SERVICIO]` | [Descripción] | `[VAR_1, VAR_2]` | 🔲 |
+| *Por definir* | Inferencia IA (OpenAI, Anthropic, etc.) | `OPENAI_API_KEY` o `ANTHROPIC_API_KEY` | 🔲 |
 
-**Integraciones comunes (referencia):**
-
-| Servicio | Propósito | Variables típicas |
-|----------|-----------|-------------------|
-| OpenAI | Inferencia IA | `OPENAI_API_KEY` |
-| Anthropic | Inferencia IA | `ANTHROPIC_API_KEY` |
-| Clerk | Autenticación | `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY` |
-| Google | OAuth/IA | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
+**Nota:** Las integraciones con IA se definirán en Fase 2.
 
 ---
 
@@ -185,7 +212,19 @@
 
 | Servicio Origen | Servicio Destino | Endpoint | Método | Request | Response | Estado |
 |-----------------|------------------|----------|--------|---------|----------|--------|
-| `[ORIGEN]` | `[DESTINO]` | `[RUTA]` | [GET/POST/etc.] | `[FORMATO]` | `[FORMATO]` | 🔲 |
+| Frontend (Pages) | Worker (D1) | `/api/db/test` | GET | - | `{ success, data }` | ✅ |
+| Frontend (Pages) | Worker (R2) | `/api/storage/upload` | POST | `FormData` | `{ success, key }` | ✅ |
+| Frontend (Pages) | Worker (Health) | `/api/health` | GET | - | `{ status, timestamp }` | ✅ |
+
+**Endpoints del Worker:**
+
+| Endpoint | Método | Descripción | Response |
+|----------|--------|-------------|----------|
+| `/api/health` | GET | Health check del servicio | `{ status: "ok", timestamp, service, version }` |
+| `/api/test` | GET | Endpoint de prueba | `{ message, hono, typescript }` |
+| `/api/db/test` | GET | Prueba de conexión D1 | `{ success, data, message }` |
+| `/api/storage/upload` | POST | Upload de archivo a R2 | `{ success, key, message }` |
+| `/api/storage/:key` | GET | Download de archivo desde R2 | `File stream` |
 
 ---
 
@@ -193,16 +232,16 @@
 
 | Capa | Tecnología | Versión | Estado |
 |------|------------|---------|--------|
-| Lenguaje | TypeScript | [latest] | 🔲 |
-| Framework | Hono | [4.x] | 🔲 |
-| Frontend | React | [19.x] | 🔲 |
-| Build tool | Vite | [latest] | 🔲 |
-| UI Components | shadcn/ui | [latest] | 🔲 |
-| Styling | Tailwind CSS | [v4.x] | 🔲 |
-| Router | React Router | [v7] | 🔲 |
-| Testing | Vitest | [latest] | 🔲 |
-| Validación | Zod | [latest] | 🔲 |
-| IA (opcional) | AI SDK | [5.x] | 🔲 |
+| Lenguaje | TypeScript | 5.4.0+ | ✅ |
+| Backend Framework | Hono | ^4.6.0 | ✅ |
+| Frontend | React | 18.x | ✅ |
+| Build tool (Frontend) | Vite | 6.1.0 | ✅ |
+| UI Framework | TailAdmin Free React | Latest | ✅ |
+| Styling | Tailwind CSS | Latest | ✅ |
+| Runtime | Cloudflare Workers | Latest | ✅ |
+| Database | Cloudflare D1 | Latest | ✅ |
+| Storage | Cloudflare R2 | Latest | ✅ |
+| Deployment | Wrangler | 4.75.0 | ✅ |
 
 ---
 
@@ -211,30 +250,33 @@
 ### 10.1 Comandos Globales
 
 ```bash
-# Build, lint, typecheck
-npm run build
-npm run lint
-npm run typecheck
+# Verificar autenticación
+wrangler whoami
 
-# Tests
-npm run test
-npm run test:coverage
+# Listar recursos
+wrangler d1 list
+wrangler r2 bucket list
+wrangler pages project list
 ```
 
 ### 10.2 Comandos por Servicio
 
-| Servicio | Dev | Build | Test | Typecheck |
-|----------|-----|-------|------|-----------|
-| `[SERVICE]` | `npm run dev:[service]` | `npm run build:[service]` | `npm run test:[service]` | `npm run typecheck:[service]` |
+| Servicio | Dev | Build | Deploy |
+|----------|-----|-------|--------|
+| Worker | `cd apps/worker && npm run dev` | - | `cd apps/worker && npm run deploy` |
+| Frontend | `cd apps/frontend && npm run dev` | `cd apps/frontend && npm run build` | `wrangler pages deploy dist` |
 
 ### 10.3 Migraciones de Base de Datos
 
 ```bash
-# Aplicar migraciones
-wrangler d1 execute [DB_NAME] --file=[path].sql --remote
+# Aplicar migraciones (remoto)
+wrangler d1 execute cbc-endes-db-test --file=migrations/001-initial.sql --remote
 
-# Listar migraciones
-wrangler d1 execute [DB_NAME] --command="SELECT * FROM d1_migrations"
+# Aplicar migraciones (local)
+wrangler d1 execute cbc-endes-db-test --file=migrations/001-initial.sql --local
+
+# Verificar datos
+wrangler d1 execute cbc-endes-db-test --command="SELECT * FROM test_items" --remote
 ```
 
 ### 10.4 Gestión de Secrets
@@ -244,7 +286,7 @@ wrangler d1 execute [DB_NAME] --command="SELECT * FROM d1_migrations"
 wrangler secret put [SECRET_NAME]
 
 # Secret para entorno específico
-wrangler secret put [SECRET_NAME] --env [dev/staging]
+wrangler secret put [SECRET_NAME] --env dev
 ```
 
 ---
@@ -253,16 +295,15 @@ wrangler secret put [SECRET_NAME] --env [dev/staging]
 
 | Archivo | Finalidad | Estado |
 |---------|-----------|--------|
-| `package.json` | Dependencias y scripts | 🔲 |
-| `tsconfig.json` | Configuración TypeScript | 🔲 |
-| `vite.config.ts` | Configuración Vite | 🔲 |
-| `wrangler.toml` o `wrangler.jsonc` | Configuración Wrangler | 🔲 |
-| `tailwind.config.js` | Configuración Tailwind | 🔲 |
-| `components.json` | Configuración shadcn/ui | 🔲 |
-| `schema.sql` | Esquema de base de datos | 🔲 |
-| `.dev.vars.example` | Plantilla variables backend | 🔲 |
-| `.env.example` | Plantilla variables frontend | 🔲 |
-| `.gitignore` | Exclusiones de versionado | 🔲 |
+| `wrangler.toml` | Configuración Wrangler (raíz) | ✅ |
+| `apps/worker/wrangler.toml` | Configuración Worker + bindings | ✅ |
+| `apps/worker/package.json` | Dependencias backend | ✅ |
+| `apps/worker/tsconfig.json` | Configuración TypeScript backend | ✅ |
+| `apps/frontend/wrangler.toml` | Configuración Pages + variables | ✅ |
+| `apps/frontend/package.json` | Dependencias frontend | ✅ |
+| `apps/frontend/.env.example` | Plantilla variables frontend | ✅ |
+| `migrations/001-initial.sql` | Migración inicial D1 | ✅ |
+| `.gitignore` | Exclusiones de versionado | ✅ |
 
 ---
 
@@ -270,17 +311,13 @@ wrangler secret put [SECRET_NAME] --env [dev/staging]
 
 | Elemento | Tipo | Observaciones | Responsable |
 |----------|------|---------------|-------------|
-| `[ELEMENTO]` | [Recurso/Variable/Config] | [Descripción de lo pendiente] | [Usuario/Equipo] |
-
-**Vacíos comunes (referencia):**
-
-- Nombre del proyecto final
-- Dominio personalizado para producción
-- Estrategia de pruebas (unitarias, integración, E2E)
-- Configuración de CORS para orígenes permitidos
-- Límites de rate limiting para la API
-- Servicios opcionales a habilitar (auth, queues, vectorize, workflows)
-- Configuración de CI/CD y GitHub Secrets
+| Nombres definitivos de recursos | Recurso | Se usarán nombres de prueba en Fase 1 | Usuario (Fase 2) |
+| Schema de base de datos definitivo | D1 | Definir tablas para análisis inmobiliarios | Usuario (Fase 2) |
+| Endpoints de API definitivos | Worker | Diseñar API para gestión de proyectos | Usuario (Fase 2) |
+| Workflows de IA | Workflow | Orquestación de prompts contra IA | Usuario (Fase 2) |
+| Integraciones externas | API | OpenAI, Anthropic u otros proveedores | Usuario (Fase 2) |
+| Autenticación de usuarios | Auth | No requerido para MVP | Usuario (Fase 3) |
+| CI/CD con GitHub Actions | Pipeline | No requerido según usuario | Usuario (opcional) |
 
 ---
 
@@ -288,7 +325,20 @@ wrangler secret put [SECRET_NAME] --env [dev/staging]
 
 | Fecha | Cambio | Responsable | Aprobado Por |
 |-------|--------|-------------|--------------|
-| [YYYY-MM-DD] | [Descripción del cambio] | [Nombre] | [Nombre] |
+| 2026-03-26 | Fase 1: Creación de recursos de prueba (Worker, D1, R2, Pages) | inventariador | usuario |
+| 2026-03-26 | Configuración de bindings D1 y R2 en worker | inventariador | usuario |
+| 2026-03-26 | Despliegue de frontend TailAdmin en Pages | inventariador | usuario |
+
+---
+
+## 14. Recursos Creados en Fase 1 (Resumen)
+
+| Recurso | Nombre | ID / URL | Estado |
+|---------|--------|----------|--------|
+| Worker | `worker-cbc-endes-dev` | https://worker-cbc-endes-dev.cbconsulting.workers.dev | ✅ |
+| Pages | `pg-cbc-endes` | https://d00e4cdb.pg-cbc-endes.pages.dev/ | ✅ |
+| D1 Database | `cbc-endes-db-test` | `22892bef-3878-4ef0-bd7d-d28bc9656914` | ✅ |
+| R2 Bucket | `cbc-endes-storage-test` | N/A (nombre único) | ✅ |
 
 ---
 
@@ -304,4 +354,4 @@ wrangler secret put [SECRET_NAME] --env [dev/staging]
 
 ---
 
-> **Nota:** Este documento es una plantilla base. Completar con los valores reales del proyecto y mantener actualizado.
+> **Nota:** Este inventario fue actualizado tras completar la Fase 1 de configuración del entorno de desarrollo. Los recursos son de prueba y serán renombrados/reconfigurados en la Fase 2 de definición y diseño del proyecto.
