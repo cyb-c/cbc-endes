@@ -4,6 +4,7 @@ import { handleGetMenu } from './handlers/menu';
 
 type AppBindings = {
   db_binding_01: D1Database;
+  r2_binding_01: R2Bucket;
 };
 
 const app = new Hono<{ Bindings: AppBindings }>();

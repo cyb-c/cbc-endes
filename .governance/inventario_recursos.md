@@ -1,9 +1,9 @@
 # Inventario de Recursos y Configuración
 
 > **Finalidad:** Fuente única de verdad para recursos Cloudflare, CI/CD, bindings, variables de entorno y configuración operativa del proyecto.
-> **Versión:** 6.0
+> **Versión:** 7.0
 > **Importante:** Este archivo es gestionado exclusivamente por el agente `inventariador`. Las modificaciones directas serán rechazadas.
-> **Última actualización:** 2026-03-27 (Despliegue de menú dinámico v1)
+> **Última actualización:** 2026-03-27 (FASE 1 PAI)
 
 ---
 
@@ -35,7 +35,7 @@
 | Campo | Valor |
 |-------|-------|
 | **Nombre del proyecto** | `cbc-endes` |
-| **Finalidad** | Gestor de proyectos de análisis inmobiliarios que ejecuta prompts contra IA mediante API |
+| **Finalidad** | Gestión de proyectos de análisis inmobiliarios (PAI), menú dinámico, pipeline events, y almacenamiento de archivos en R2 |
 | **Entorno de trabajo** | GitHub Codespaces |
 | **Lenguaje base** | TypeScript |
 | **Entornos de despliegue** | dev (preview), production |
@@ -83,7 +83,7 @@
 
 | Nombre | Binding | App/Proyecto | Puerto Dev | Estado CF | Último Deploy | Notas |
 |--------|---------|--------------|------------|-----------|---------------|-------|
-| `wk-backend` | `db_binding_01` | Backend API (dev) | 8787 | ✅ | 2026-03-27 | Menú dinámico v1 |
+| `wk-backend` | `db_binding_01, r2_binding_01` | Backend API (dev) | 8787 | ✅ | 2026-03-27 | FASE 1 PAI completada (Pipeline Events, Esquema PAI, R2 Storage) |
 | `worker-cbc-endes-dev` | N/A | Backend API (dev) | 8787 | ❌ Eliminado | 2026-03-26 | Recurso de prueba eliminado |
 
 **Nota:** El Worker `wk-backend` está activo y proporciona endpoints para el menú dinámico. El Worker de prueba `worker-cbc-endes-dev` fue eliminado el 2026-03-27.
@@ -107,9 +107,10 @@
 
 | Nombre | Binding | App | Estado | Notas |
 |--------|---------|-----|--------|-------|
+| `r2-cbconsulting` | `r2_binding_01` | `wk-backend` | ✅ | Bucket R2 para almacenamiento de archivos del proyecto PAI |
 | `cbc-endes-storage-test` | BUCKET | worker-cbc-endes | ❌ Eliminado | Recurso de prueba eliminado |
 
-**Nota:** El bucket R2 de prueba fue eliminado el 2026-03-27. No hay R2 activos actualmente.
+**Nota:** El bucket R2 de prueba fue eliminado el 2026-03-27. El bucket `r2-cbconsulting` está activo para almacenamiento de archivos PAI.
 
 ### 4.5 Queues
 
@@ -170,6 +171,7 @@
 | Clave o Binding | Tipo | Estado | Ubicación | Observaciones |
 |-----------------|------|--------|-----------|---------------|
 | `db_binding_01` | D1 Database | ✅ | `apps/worker/wrangler.toml` | Binding para `db-cbconsulting` |
+| `r2_binding_01` | R2 Bucket | ✅ | `apps/worker/wrangler.toml` | Binding al bucket `r2-cbconsulting` para almacenamiento de archivos PAI |
 | `DB` | D1 Database | ❌ Eliminado | - | Binding eliminado (D1 eliminada) |
 | `BUCKET` | R2 Bucket | ❌ Eliminado | - | Binding eliminado (R2 eliminado) |
 | `VITE_API_BASE_URL` | Variable frontend | ✅ | `apps/frontend/wrangler.toml` | URL de la API backend |
@@ -281,6 +283,9 @@ wrangler d1 migrations list db-cbconsulting
 
 **Migraciones aplicadas:**
 - `002-menu-dinamico-v1.sql` - Crea tabla `MOD_modulos_config` para menú dinámico
+- `003-pipeline-events.sql` - Crea tabla `pipeline_eventos` para tracking de eventos del pipeline
+- `004-pai-mvp.sql` - Crea tablas PAI (PRO, ATR, VAL, NOT, ART) para gestión de proyectos de análisis inmobiliarios
+- `005-pai-mvp-datos-iniciales.sql` - Datos iniciales para tablas PAI
 
 ### 10.4 Gestión de Secrets
 
@@ -330,6 +335,7 @@ wrangler secret put [SECRET_NAME] --env dev
 
 | Fecha | Cambio | Responsable | Aprobado Por |
 |-------|--------|-------------|--------------|
+| 2026-03-27 | Actualización v7.0 - FASE 1 PAI completada: Pipeline Events, Esquema PAI (PRO/ATR/VAL/NOT/ART), R2 Storage | Orchestrator | Aprobado |
 | 2026-03-27 | Despliegue de menú dinámico v1: Worker `wk-backend`, D1 `db-cbconsulting`, binding `db_binding_01`, endpoint `/api/menu` | inventariador | usuario |
 | 2026-03-27 | Eliminación de recursos de prueba (Worker, D1, R2) | inventariador | usuario |
 | 2026-03-26 | Despliegue de frontend TailAdmin en Pages | inventariador | usuario |
@@ -341,11 +347,12 @@ wrangler secret put [SECRET_NAME] --env dev
 
 | Recurso | Nombre | Estado | Notas |
 |---------|--------|--------|-------|
-| Worker | `wk-backend` | ✅ Activo | Backend API para menú dinámico v1 |
+| Worker | `wk-backend` | ✅ Activo | Backend API para FASE 1 PAI |
 | Worker | `worker-cbc-endes-dev` | ❌ Eliminado | Recurso de prueba temporal |
 | Pages | `pg-cbc-endes` | ✅ Activo | Frontend en producción |
-| D1 Database | `db-cbconsulting` | ✅ Activo | Base de datos para menú dinámico |
+| D1 Database | `db-cbconsulting` | ✅ Activo | Base de datos para menú dinámico y PAI |
 | D1 Database | `cbc-endes-db-test` | ❌ Eliminado | Recurso de prueba temporal |
+| R2 Bucket | `r2-cbconsulting` | ✅ Activo | Bucket R2 para almacenamiento de archivos PAI |
 | R2 Bucket | `cbc-endes-storage-test` | ❌ Eliminado | Recurso de prueba temporal |
 
 ---

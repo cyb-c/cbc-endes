@@ -14,6 +14,7 @@ type Env = import('../env').Env;
 
 type AppBindings = {
   db_binding_01: D1Database;
+  r2_binding_01: R2Bucket;
 };
 
 type AppContext = Context<{ Bindings: AppBindings }>;

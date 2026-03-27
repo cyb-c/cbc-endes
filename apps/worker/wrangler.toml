@@ -8,6 +8,10 @@ binding = "db_binding_01"
 database_name = "db-cbconsulting"
 database_id = "fafcd5e2-b960-49f7-8502-88a0f8ba5052"
 
+[[r2_buckets]]
+binding = "r2_binding_01"
+bucket_name = "r2-cbconsulting"
+
 [env.dev]
 name = "wk-backend-dev"
 
@@ -15,3 +19,7 @@ name = "wk-backend-dev"
 binding = "db_binding_01"
 database_name = "db-cbconsulting"
 database_id = "fafcd5e2-b960-49f7-8502-88a0f8ba5052"
+
+[[env.dev.r2_buckets]]
+binding = "r2_binding_01"
+bucket_name = "r2-cbconsulting"
