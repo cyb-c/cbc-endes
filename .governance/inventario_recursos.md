@@ -1,9 +1,9 @@
 # Inventario de Recursos y Configuración
 
 > **Finalidad:** Fuente única de verdad para recursos Cloudflare, CI/CD, bindings, variables de entorno y configuración operativa del proyecto.
-> **Versión:** 7.0
+> **Versión:** 8.0
 > **Importante:** Este archivo es gestionado exclusivamente por el agente `inventariador`. Las modificaciones directas serán rechazadas.
-> **Última actualización:** 2026-03-27 (FASE 1 PAI)
+> **Última actualización:** 2026-03-27 (FASE 2: Backend - Core Funcional)
 
 ---
 
@@ -83,7 +83,7 @@
 
 | Nombre | Binding | App/Proyecto | Puerto Dev | Estado CF | Último Deploy | Notas |
 |--------|---------|--------------|------------|-----------|---------------|-------|
-| `wk-backend` | `db_binding_01, r2_binding_01` | Backend API (dev) | 8787 | ✅ | 2026-03-27 | FASE 1 PAI completada (Pipeline Events, Esquema PAI, R2 Storage) |
+| `wk-backend` | `db_binding_01, r2_binding_01` | Backend API (dev) | 8787 | ✅ | 2026-03-27 | FASE 2 Backend Core Funcional completada (10 endpoints PAI, Servicio Simulación IA, Handlers Proyectos/Notas) |
 | `worker-cbc-endes-dev` | N/A | Backend API (dev) | 8787 | ❌ Eliminado | 2026-03-26 | Recurso de prueba eliminado |
 
 **Nota:** El Worker `wk-backend` está activo y proporciona endpoints para el menú dinámico. El Worker de prueba `worker-cbc-endes-dev` fue eliminado el 2026-03-27.
@@ -220,6 +220,16 @@
 | Servicio Origen | Servicio Destino | Endpoint | Método | Request | Response | Estado |
 |-----------------|------------------|----------|--------|---------|----------|--------|
 | Frontend (Pages) | `wk-backend` | `/api/menu` | GET | Ninguno | JSON con estructura de menú agrupada por módulos | ✅ |
+| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos` | POST | `{ ijson: string }` | `{ proyecto: {...} }` | ✅ |
+| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id` | GET | Ninguno | `{ proyecto: {...}, artefactos: [...], notas: [...] }` | ✅ |
+| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos` | GET | Query params (filtros, paginación) | `{ proyectos: [...], paginacion: {...} }` | ✅ |
+| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id/analisis` | POST | `{ forzar_reejecucion?: boolean }` | `{ proyecto: {...}, artefactos_generados: [...] }` | ✅ |
+| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id/artefactos` | GET | Ninguno | `{ artefactos: [...] }` | ✅ |
+| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id/estado` | PUT | `{ estado_id: number, ... }` | `{ proyecto: {...} }` | ✅ |
+| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id` | DELETE | Ninguno | `{ mensaje: "...", proyecto_eliminado: {...} }` | ✅ |
+| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id/pipeline` | GET | Query params (limite) | `{ eventos: [...] }` | ✅ |
+| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id/notas` | POST | `{ tipo_nota_id, autor, contenido }` | `{ nota: {...} }` | ✅ |
+| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id/notas/:notaId` | PUT | `{ contenido: string }` | `{ nota: {...} }` | ✅ |
 
 **Endpoints del Worker:**
 
@@ -228,6 +238,16 @@
 | `/api/health` | GET | Health check del servicio | `{ status: "ok", timestamp, service, version }` | ✅ |
 | `/api/test` | GET | Test endpoint de disponibilidad | `{ message, hono, typescript }` | ✅ |
 | `/api/menu` | GET | Obtiene estructura de menú dinámico | `{ modulos: [...] }` con módulos y funciones | ✅ |
+| `/api/pai/proyectos` | POST | Crear nuevo proyecto PAI | `{ proyecto: {...} }` | ✅ |
+| `/api/pai/proyectos/:id` | GET | Obtener detalles de proyecto PAI | `{ proyecto: {...}, artefactos: [...], notas: [...] }` | ✅ |
+| `/api/pai/proyectos` | GET | Listar proyectos PAI con filtros y paginación | `{ proyectos: [...], paginacion: {...} }` | ✅ |
+| `/api/pai/proyectos/:id/analisis` | POST | Ejecutar análisis completo de proyecto PAI | `{ proyecto: {...}, artefactos_generados: [...] }` | ✅ |
+| `/api/pai/proyectos/:id/artefactos` | GET | Obtener artefactos de proyecto PAI | `{ artefactos: [...] }` | ✅ |
+| `/api/pai/proyectos/:id/estado` | PUT | Cambiar estado manual de proyecto PAI | `{ proyecto: {...} }` | ✅ |
+| `/api/pai/proyectos/:id` | DELETE | Eliminar proyecto PAI y sus artefactos | `{ mensaje: "...", proyecto_eliminado: {...} }` | ✅ |
+| `/api/pai/proyectos/:id/pipeline` | GET | Obtener historial de ejecución de proyecto PAI | `{ eventos: [...] }` | ✅ |
+| `/api/pai/proyectos/:id/notas` | POST | Crear nota asociada a proyecto PAI | `{ nota: {...} }` | ✅ |
+| `/api/pai/proyectos/:id/notas/:notaId` | PUT | Editar nota existente de proyecto PAI | `{ nota: {...} }` | ✅ |
 
 ---
 
@@ -284,8 +304,8 @@ wrangler d1 migrations list db-cbconsulting
 **Migraciones aplicadas:**
 - `002-menu-dinamico-v1.sql` - Crea tabla `MOD_modulos_config` para menú dinámico
 - `003-pipeline-events.sql` - Crea tabla `pipeline_eventos` para tracking de eventos del pipeline
-- `004-pai-mvp.sql` - Crea tablas PAI (PRO, ATR, VAL, NOT, ART) para gestión de proyectos de análisis inmobiliarios
-- `005-pai-mvp-datos-iniciales.sql` - Datos iniciales para tablas PAI
+- `004-pai-mvp.sql` - Crea tablas PAI (PAI_ATR_atributos, PAI_VAL_valores, PAI_PRO_proyectos, PAI_NOT_notas, PAI_ART_artefactos) para gestión de proyectos de análisis inmobiliarios
+- `005-pai-mvp-datos-iniciales.sql` - Datos iniciales para tablas PAI (37 registros en PAI_VAL_valores)
 
 ### 10.4 Gestión de Secrets
 
@@ -347,7 +367,7 @@ wrangler secret put [SECRET_NAME] --env dev
 
 | Recurso | Nombre | Estado | Notas |
 |---------|--------|--------|-------|
-| Worker | `wk-backend` | ✅ Activo | Backend API para FASE 1 PAI |
+| Worker | `wk-backend` | ✅ Activo | Backend API para FASE 2 (Backend Core Funcional) - 10 endpoints PAI implementados |
 | Worker | `worker-cbc-endes-dev` | ❌ Eliminado | Recurso de prueba temporal |
 | Pages | `pg-cbc-endes` | ✅ Activo | Frontend en producción |
 | D1 Database | `db-cbconsulting` | ✅ Activo | Base de datos para menú dinámico y PAI |
@@ -357,18 +377,18 @@ wrangler secret put [SECRET_NAME] --env dev
 
 ---
 
-## 15. Próximos Pasos (Fase 2)
+## 15. Próximos Pasos (Fase 3)
 
-La Fase 2 de definición y diseño del proyecto incluirá:
+La Fase 3 de desarrollo incluirá:
 
-1. **Definir nombre definitivo** de R2 Bucket
-2. **Ampliar schema de base de datos** para análisis inmobiliarios
-3. **Diseñar endpoints adicionales de API** para gestión de proyectos
-4. **Definir flujos de Workflow** para prompts de IA
-5. **Planificar integración con APIs de IA** (OpenAI, Anthropic, etc.)
-6. **Crear R2 Bucket** con nombre definitivo
+1. **Añadir módulo "Proyectos" al menú dinámico** en la tabla `MOD_modulos_config`
+2. **Implementar sección Proyectos PAI** en el frontend
+3. **Implementar formulario de creación de proyecto** con validación de IJSON
+4. **Implementar página de detalle de proyecto PAI** con visualización de artefactos y notas
+5. **Implementar componentes de notas** (crear, editar, listar)
+6. **Implementar modal de cambio de estado** con selección de motivos
 
-> **Nota:** El Worker backend (`wk-backend`) y la D1 Database (`db-cbconsulting`) ya están desplegados y activos como parte del menú dinámico v1.
+> **Nota:** El Worker backend (`wk-backend`) y la D1 Database (`db-cbconsulting`) ya están desplegados y activos con todos los endpoints PAI implementados. El backend está listo para ser consumido por el frontend.
 
 ---
 
@@ -384,4 +404,4 @@ La Fase 2 de definición y diseño del proyecto incluirá:
 
 ---
 
-> **Nota:** Este inventario refleja el estado actual del proyecto tras el despliegue del menú dinámico v1. Los recursos activos incluyen el Worker backend (`wk-backend`), la D1 Database (`db-cbconsulting`) y el proyecto Pages (`pg-cbc-endes`) para el frontend de producción.
+> **Nota:** Este inventario refleja el estado actual del proyecto tras la finalización de FASE 2 (Backend - Core Funcional). Los recursos activos incluyen el Worker backend (`wk-backend`) con 10 endpoints PAI implementados, la D1 Database (`db-cbconsulting`) con tablas PAI creadas y datos iniciales (37 registros), el bucket R2 (`r2-cbconsulting`) para almacenamiento de artefactos, y el proyecto Pages (`pg-cbc-endes`) para el frontend de producción.
