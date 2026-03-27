@@ -1,9 +1,9 @@
 # Inventario de Recursos y Configuración
 
 > **Finalidad:** Fuente única de verdad para recursos Cloudflare, CI/CD, bindings, variables de entorno y configuración operativa del proyecto.
-> **Versión:** 5.1
+> **Versión:** 5.2
 > **Importante:** Este archivo es gestionado exclusivamente por el agente `inventariador`. Las modificaciones directas serán rechazadas.
-> **Última actualización:** 2026-03-26 (Fase 1 completada)
+> **Última actualización:** 2026-03-27 (Recursos de prueba eliminados)
 
 ---
 
@@ -16,6 +16,7 @@
 | 🔲 | Declarado en configuración pero NO creado en Cloudflare |
 | 🚫 | Servicio Cloudflare no habilitado en la cuenta |
 | 🗑️ | Existe en Cloudflare pero sin referencia en el repositorio (huérfano) |
+| ❌ | Eliminado (existió pero fue removido intencionalmente) |
 
 ---
 
@@ -80,10 +81,11 @@
 
 ### 4.1 Workers
 
-| Nombre | Binding | App/Proyecto | Puerto Dev | Estado CF | Último Deploy |
-|--------|---------|--------------|------------|-----------|---------------|
-| `worker-cbc-endes` | N/A | Backend API | 8787 | ✅ | 2026-03-26 |
-| `worker-cbc-endes-dev` | N/A | Backend API (dev) | 8787 | ✅ | 2026-03-26 |
+| Nombre | Binding | App/Proyecto | Puerto Dev | Estado CF | Último Deploy | Notas |
+|--------|---------|--------------|------------|-----------|---------------|-------|
+| `worker-cbc-endes-dev` | N/A | Backend API (dev) | 8787 | ❌ Eliminado | 2026-03-26 | Recurso de prueba eliminado |
+
+**Nota:** El Worker de prueba fue eliminado el 2026-03-27. No hay Workers activos actualmente.
 
 ### 4.2 KV Namespaces
 
@@ -93,30 +95,19 @@
 
 ### 4.3 Bases de Datos (D1)
 
-| Nombre | Binding | App | ID | Estado |
-|--------|---------|-----|----|--------|
-| `cbc-endes-db-test` | DB | worker-cbc-endes | `22892bef-3878-4ef0-bd7d-d28bc9656914` | ✅ |
+| Nombre | Binding | App | ID | Estado | Notas |
+|--------|---------|-----|----|--------|-------|
+| `cbc-endes-db-test` | DB | worker-cbc-endes | `22892bef-3878-4ef0-bd7d-d28bc9656914` | ❌ Eliminada | Recurso de prueba eliminado |
 
-**Migraciones aplicadas:**
-
-| Migración | Archivo | Estado |
-|-----------|---------|--------|
-| 001-initial | `migrations/001-initial.sql` | ✅ Aplicada |
-
-**Tablas existentes:**
-- `d1_migrations` - Control de versiones de migraciones
-- `test_items` - Tabla de prueba (datos de demostración)
+**Nota:** La base de datos D1 de prueba fue eliminada el 2026-03-27. No hay D1 activas actualmente.
 
 ### 4.4 Buckets R2
 
-| Nombre | Binding | App | Estado |
-|--------|---------|-----|--------|
-| `cbc-endes-storage-test` | BUCKET | worker-cbc-endes | ✅ |
+| Nombre | Binding | App | Estado | Notas |
+|--------|---------|-----|--------|-------|
+| `cbc-endes-storage-test` | BUCKET | worker-cbc-endes | ❌ Eliminado | Recurso de prueba eliminado |
 
-**Configuración:**
-- Storage class: Standard
-- Location: WEUR (Western Europe)
-- CORS: Permitido desde `http://localhost:5173` y `https://pg-cbc-endes.pages.dev`
+**Nota:** El bucket R2 de prueba fue eliminado el 2026-03-27. No hay R2 activos actualmente.
 
 ### 4.5 Queues
 
@@ -157,6 +148,8 @@
 - Build output dir: `dist`
 - Framework: React + Vite + Tailwind CSS
 
+**Nota:** Pages es el ÚNICO recurso mantenido de la Fase 1.
+
 ---
 
 ## 5. Wrangler y Despliegue
@@ -174,8 +167,8 @@
 
 | Clave o Binding | Tipo | Estado | Ubicación | Observaciones |
 |-----------------|------|--------|-----------|---------------|
-| `DB` | D1 Database | ✅ | `apps/worker/wrangler.toml` | Binding a `cbc-endes-db-test` |
-| `BUCKET` | R2 Bucket | ✅ | `apps/worker/wrangler.toml` | Binding a `cbc-endes-storage-test` |
+| `DB` | D1 Database | ❌ Eliminado | - | Binding eliminado (D1 eliminada) |
+| `BUCKET` | R2 Bucket | ❌ Eliminado | - | Binding eliminado (R2 eliminado) |
 | `VITE_API_BASE_URL` | Variable frontend | ✅ | `apps/frontend/wrangler.toml` | URL de la API backend |
 | `VITE_ENVIRONMENT` | Variable frontend | ✅ | `apps/frontend/wrangler.toml` | Entorno de ejecución |
 
@@ -212,19 +205,14 @@
 
 | Servicio Origen | Servicio Destino | Endpoint | Método | Request | Response | Estado |
 |-----------------|------------------|----------|--------|---------|----------|--------|
-| Frontend (Pages) | Worker (D1) | `/api/db/test` | GET | - | `{ success, data }` | ✅ |
-| Frontend (Pages) | Worker (R2) | `/api/storage/upload` | POST | `FormData` | `{ success, key }` | ✅ |
-| Frontend (Pages) | Worker (Health) | `/api/health` | GET | - | `{ status, timestamp }` | ✅ |
+| Frontend (Pages) | *Sin backend activo* | - | - | - | - | 🔲 |
 
-**Endpoints del Worker:**
+**Endpoints del Worker (por definir en Fase 2):**
 
-| Endpoint | Método | Descripción | Response |
-|----------|--------|-------------|----------|
-| `/api/health` | GET | Health check del servicio | `{ status: "ok", timestamp, service, version }` |
-| `/api/test` | GET | Endpoint de prueba | `{ message, hono, typescript }` |
-| `/api/db/test` | GET | Prueba de conexión D1 | `{ success, data, message }` |
-| `/api/storage/upload` | POST | Upload de archivo a R2 | `{ success, key, message }` |
-| `/api/storage/:key` | GET | Download de archivo desde R2 | `File stream` |
+| Endpoint | Método | Descripción | Response | Estado |
+|----------|--------|-------------|----------|--------|
+| `/api/health` | GET | Health check del servicio | `{ status: "ok", ... }` | 🔲 |
+| *Por definir* | - | Endpoints de la API | - | 🔲 |
 
 ---
 
@@ -239,9 +227,11 @@
 | UI Framework | TailAdmin Free React | Latest | ✅ |
 | Styling | Tailwind CSS | Latest | ✅ |
 | Runtime | Cloudflare Workers | Latest | ✅ |
-| Database | Cloudflare D1 | Latest | ✅ |
-| Storage | Cloudflare R2 | Latest | ✅ |
 | Deployment | Wrangler | 4.75.0 | ✅ |
+
+**Recursos eliminados (Fase 1 de prueba):**
+- Cloudflare D1 ❌
+- Cloudflare R2 ❌
 
 ---
 
@@ -254,9 +244,9 @@
 wrangler whoami
 
 # Listar recursos
-wrangler d1 list
-wrangler r2 bucket list
 wrangler pages project list
+wrangler d1 list          # Sin D1 activas
+wrangler r2 bucket list   # Sin R2 activos
 ```
 
 ### 10.2 Comandos por Servicio
@@ -269,14 +259,8 @@ wrangler pages project list
 ### 10.3 Migraciones de Base de Datos
 
 ```bash
-# Aplicar migraciones (remoto)
-wrangler d1 execute cbc-endes-db-test --file=migrations/001-initial.sql --remote
-
-# Aplicar migraciones (local)
-wrangler d1 execute cbc-endes-db-test --file=migrations/001-initial.sql --local
-
-# Verificar datos
-wrangler d1 execute cbc-endes-db-test --command="SELECT * FROM test_items" --remote
+# Sin D1 activas actualmente
+# Las migraciones se definirán en Fase 2
 ```
 
 ### 10.4 Gestión de Secrets
@@ -296,14 +280,16 @@ wrangler secret put [SECRET_NAME] --env dev
 | Archivo | Finalidad | Estado |
 |---------|-----------|--------|
 | `wrangler.toml` | Configuración Wrangler (raíz) | ✅ |
-| `apps/worker/wrangler.toml` | Configuración Worker + bindings | ✅ |
+| `apps/worker/wrangler.toml` | Configuración Worker (sin bindings) | ✅ |
 | `apps/worker/package.json` | Dependencias backend | ✅ |
 | `apps/worker/tsconfig.json` | Configuración TypeScript backend | ✅ |
 | `apps/frontend/wrangler.toml` | Configuración Pages + variables | ✅ |
 | `apps/frontend/package.json` | Dependencias frontend | ✅ |
 | `apps/frontend/.env.example` | Plantilla variables frontend | ✅ |
-| `migrations/001-initial.sql` | Migración inicial D1 | ✅ |
 | `.gitignore` | Exclusiones de versionado | ✅ |
+
+**Archivos eliminados:**
+- `migrations/001-initial.sql` - Migración D1 eliminada (ya no aplica)
 
 ---
 
@@ -311,10 +297,10 @@ wrangler secret put [SECRET_NAME] --env dev
 
 | Elemento | Tipo | Observaciones | Responsable |
 |----------|------|---------------|-------------|
-| Nombres definitivos de recursos | Recurso | Se usarán nombres de prueba en Fase 1 | Usuario (Fase 2) |
-| Schema de base de datos definitivo | D1 | Definir tablas para análisis inmobiliarios | Usuario (Fase 2) |
-| Endpoints de API definitivos | Worker | Diseñar API para gestión de proyectos | Usuario (Fase 2) |
-| Workflows de IA | Workflow | Orquestación de prompts contra IA | Usuario (Fase 2) |
+| Worker backend definitivo | Recurso | Definir nombre y configuración | Usuario (Fase 2) |
+| D1 Database definitiva | Recurso | Definir nombre y schema para análisis inmobiliarios | Usuario (Fase 2) |
+| R2 Bucket definitivo | Recurso | Definir nombre y configuración de acceso | Usuario (Fase 2) |
+| Workflows | Recurso | Orquestación de prompts contra IA | Usuario (Fase 2) |
 | Integraciones externas | API | OpenAI, Anthropic u otros proveedores | Usuario (Fase 2) |
 | Autenticación de usuarios | Auth | No requerido para MVP | Usuario (Fase 3) |
 | CI/CD con GitHub Actions | Pipeline | No requerido según usuario | Usuario (opcional) |
@@ -325,20 +311,33 @@ wrangler secret put [SECRET_NAME] --env dev
 
 | Fecha | Cambio | Responsable | Aprobado Por |
 |-------|--------|-------------|--------------|
-| 2026-03-26 | Fase 1: Creación de recursos de prueba (Worker, D1, R2, Pages) | inventariador | usuario |
-| 2026-03-26 | Configuración de bindings D1 y R2 en worker | inventariador | usuario |
+| 2026-03-27 | Eliminación de recursos de prueba (Worker, D1, R2) | inventariador | usuario |
 | 2026-03-26 | Despliegue de frontend TailAdmin en Pages | inventariador | usuario |
+| 2026-03-26 | Fase 1: Creación de recursos de prueba (Worker, D1, R2, Pages) | inventariador | usuario |
 
 ---
 
-## 14. Recursos Creados en Fase 1 (Resumen)
+## 14. Estado Actual de Recursos (Post-Eliminación Fase 1)
 
-| Recurso | Nombre | ID / URL | Estado |
-|---------|--------|----------|--------|
-| Worker | `worker-cbc-endes-dev` | https://worker-cbc-endes-dev.cbconsulting.workers.dev | ✅ |
-| Pages | `pg-cbc-endes` | https://d00e4cdb.pg-cbc-endes.pages.dev/ | ✅ |
-| D1 Database | `cbc-endes-db-test` | `22892bef-3878-4ef0-bd7d-d28bc9656914` | ✅ |
-| R2 Bucket | `cbc-endes-storage-test` | N/A (nombre único) | ✅ |
+| Recurso | Nombre | Estado | Notas |
+|---------|--------|--------|-------|
+| Worker | `worker-cbc-endes-dev` | ❌ Eliminado | Recurso de prueba temporal |
+| Pages | `pg-cbc-endes` | ✅ Activo | **SE MANTIENE** para producción |
+| D1 Database | `cbc-endes-db-test` | ❌ Eliminado | Recurso de prueba temporal |
+| R2 Bucket | `cbc-endes-storage-test` | ❌ Eliminado | Recurso de prueba temporal |
+
+---
+
+## 15. Próximos Pasos (Fase 2)
+
+La Fase 2 de definición y diseño del proyecto incluirá:
+
+1. **Definir nombres definitivos** de recursos (Worker, D1, R2)
+2. **Diseñar schema de base de datos** para análisis inmobiliarios
+3. **Diseñar endpoints de API** para gestión de proyectos
+4. **Definir flujos de Workflow** para prompts de IA
+5. **Planificar integración con APIs de IA** (OpenAI, Anthropic, etc.)
+6. **Crear nuevos recursos** con nombres definitivos
 
 ---
 
@@ -354,4 +353,4 @@ wrangler secret put [SECRET_NAME] --env dev
 
 ---
 
-> **Nota:** Este inventario fue actualizado tras completar la Fase 1 de configuración del entorno de desarrollo. Los recursos son de prueba y serán renombrados/reconfigurados en la Fase 2 de definición y diseño del proyecto.
+> **Nota:** Este inventario refleja el estado actual del proyecto tras la eliminación de los recursos de prueba de la Fase 1. Solo se mantiene el proyecto Pages (`pg-cbc-endes`) que será utilizado para el frontend de producción. Los recursos definitivos se crearán en la Fase 2 de definición y diseño.
