@@ -1,5 +1,10 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { handleGetMenu } from './handlers/menu';
+
+type AppBindings = {
+  db_binding_01: D1Database;
+};
 
 const app = new Hono<{ Bindings: AppBindings }>();
 
@@ -30,9 +35,8 @@ app.get('/api/test', (c) => {
   });
 });
 
+// Menu endpoint
+app.get('/api/menu', handleGetMenu);
+
 export default app;
 
-// Types
-type AppBindings = {
-  ENV: string;
-};

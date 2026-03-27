@@ -3,6 +3,10 @@ import { Outlet } from "react-router";
 import AppHeader from "./AppHeader";
 import Backdrop from "./Backdrop";
 import AppSidebar from "./AppSidebar";
+import { AppSidebarDynamic } from "../components/AppSidebarDynamic";
+
+// Feature flag for dynamic menu
+const USE_DYNAMIC_MENU = import.meta.env.VITE_USE_DYNAMIC_MENU === 'true';
 
 const LayoutContent: React.FC = () => {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
@@ -10,7 +14,7 @@ const LayoutContent: React.FC = () => {
   return (
     <div className="min-h-screen xl:flex">
       <div>
-        <AppSidebar />
+        {USE_DYNAMIC_MENU ? <AppSidebarDynamic isExpanded={isExpanded} /> : <AppSidebar />}
         <Backdrop />
       </div>
       <div

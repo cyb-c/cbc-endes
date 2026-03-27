@@ -1,7 +1,17 @@
-name = "worker-cbc-endes"
+name = "wk-backend"
 main = "src/index.ts"
 compatibility_date = "2026-03-26"
 compatibility_flags = ["nodejs_compat"]
 
+[[d1_databases]]
+binding = "db_binding_01"
+database_name = "db-cbconsulting"
+database_id = "fafcd5e2-b960-49f7-8502-88a0f8ba5052"
+
 [env.dev]
-name = "worker-cbc-endes-dev"
+name = "wk-backend-dev"
+
+[[env.dev.d1_databases]]
+binding = "db_binding_01"
+database_name = "db-cbconsulting"
+database_id = "fafcd5e2-b960-49f7-8502-88a0f8ba5052"

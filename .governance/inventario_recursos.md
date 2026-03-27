@@ -1,9 +1,9 @@
 # Inventario de Recursos y Configuración
 
 > **Finalidad:** Fuente única de verdad para recursos Cloudflare, CI/CD, bindings, variables de entorno y configuración operativa del proyecto.
-> **Versión:** 5.2
+> **Versión:** 6.0
 > **Importante:** Este archivo es gestionado exclusivamente por el agente `inventariador`. Las modificaciones directas serán rechazadas.
-> **Última actualización:** 2026-03-27 (Recursos de prueba eliminados)
+> **Última actualización:** 2026-03-27 (Despliegue de menú dinámico v1)
 
 ---
 
@@ -83,9 +83,10 @@
 
 | Nombre | Binding | App/Proyecto | Puerto Dev | Estado CF | Último Deploy | Notas |
 |--------|---------|--------------|------------|-----------|---------------|-------|
+| `wk-backend` | `db_binding_01` | Backend API (dev) | 8787 | ✅ | 2026-03-27 | Menú dinámico v1 |
 | `worker-cbc-endes-dev` | N/A | Backend API (dev) | 8787 | ❌ Eliminado | 2026-03-26 | Recurso de prueba eliminado |
 
-**Nota:** El Worker de prueba fue eliminado el 2026-03-27. No hay Workers activos actualmente.
+**Nota:** El Worker `wk-backend` está activo y proporciona endpoints para el menú dinámico. El Worker de prueba `worker-cbc-endes-dev` fue eliminado el 2026-03-27.
 
 ### 4.2 KV Namespaces
 
@@ -97,9 +98,10 @@
 
 | Nombre | Binding | App | ID | Estado | Notas |
 |--------|---------|-----|----|--------|-------|
+| `db-cbconsulting` | `db_binding_01` | `wk-backend` | `fafcd5e2-b960-49f7-8502-88a0f8ba5052` | ✅ | Menú dinámico v1 |
 | `cbc-endes-db-test` | DB | worker-cbc-endes | `22892bef-3878-4ef0-bd7d-d28bc9656914` | ❌ Eliminada | Recurso de prueba eliminado |
 
-**Nota:** La base de datos D1 de prueba fue eliminada el 2026-03-27. No hay D1 activas actualmente.
+**Nota:** La D1 Database `db-cbconsulting` está activa y contiene la tabla `MOD_modulos_config`. La base de datos de prueba `cbc-endes-db-test` fue eliminada el 2026-03-27.
 
 ### 4.4 Buckets R2
 
@@ -167,6 +169,7 @@
 
 | Clave o Binding | Tipo | Estado | Ubicación | Observaciones |
 |-----------------|------|--------|-----------|---------------|
+| `db_binding_01` | D1 Database | ✅ | `apps/worker/wrangler.toml` | Binding para `db-cbconsulting` |
 | `DB` | D1 Database | ❌ Eliminado | - | Binding eliminado (D1 eliminada) |
 | `BUCKET` | R2 Bucket | ❌ Eliminado | - | Binding eliminado (R2 eliminado) |
 | `VITE_API_BASE_URL` | Variable frontend | ✅ | `apps/frontend/wrangler.toml` | URL de la API backend |
@@ -176,11 +179,20 @@
 
 ## 6. Variables de Entorno por App
 
-### `worker-cbc-endes` (Backend)
+### `wk-backend` (Backend)
+
+| Variable | Tipo | Sensible | Descripción | Estado |
+|----------|------|----------|-------------|--------|
+| `db_binding_01` | D1 Binding | No | Binding a base de datos D1 | ✅ |
+| *Por definir* | String | Sí | Variables para integraciones externas (IA) | 🔲 |
+
+### `worker-cbc-endes` (Backend - Eliminado)
 
 | Variable | Tipo | Sensible | Descripción | Estado |
 |----------|------|----------|-------------|--------|
 | *Por definir* | String | Sí | Variables para integraciones externas | 🔲 |
+
+> **Nota:** El backend `worker-cbc-endes` fue eliminado. El backend activo es `wk-backend`.
 
 ### `pg-cbc-endes` (Frontend Pages)
 
@@ -205,14 +217,15 @@
 
 | Servicio Origen | Servicio Destino | Endpoint | Método | Request | Response | Estado |
 |-----------------|------------------|----------|--------|---------|----------|--------|
-| Frontend (Pages) | *Sin backend activo* | - | - | - | - | 🔲 |
+| Frontend (Pages) | `wk-backend` | `/api/menu` | GET | Ninguno | JSON con estructura de menú agrupada por módulos | ✅ |
 
-**Endpoints del Worker (por definir en Fase 2):**
+**Endpoints del Worker:**
 
 | Endpoint | Método | Descripción | Response | Estado |
 |----------|--------|-------------|----------|--------|
-| `/api/health` | GET | Health check del servicio | `{ status: "ok", ... }` | 🔲 |
-| *Por definir* | - | Endpoints de la API | - | 🔲 |
+| `/api/health` | GET | Health check del servicio | `{ status: "ok", timestamp, service, version }` | ✅ |
+| `/api/test` | GET | Test endpoint de disponibilidad | `{ message, hono, typescript }` | ✅ |
+| `/api/menu` | GET | Obtiene estructura de menú dinámico | `{ modulos: [...] }` con módulos y funciones | ✅ |
 
 ---
 
@@ -259,9 +272,15 @@ wrangler r2 bucket list   # Sin R2 activos
 ### 10.3 Migraciones de Base de Datos
 
 ```bash
-# Sin D1 activas actualmente
-# Las migraciones se definirán en Fase 2
+# Migración aplicada a db-cbconsulting
+wrangler d1 migrations apply db-cbconsulting
+
+# Ver migraciones ejecutadas
+wrangler d1 migrations list db-cbconsulting
 ```
+
+**Migraciones aplicadas:**
+- `002-menu-dinamico-v1.sql` - Crea tabla `MOD_modulos_config` para menú dinámico
 
 ### 10.4 Gestión de Secrets
 
@@ -297,13 +316,13 @@ wrangler secret put [SECRET_NAME] --env dev
 
 | Elemento | Tipo | Observaciones | Responsable |
 |----------|------|---------------|-------------|
-| Worker backend definitivo | Recurso | Definir nombre y configuración | Usuario (Fase 2) |
-| D1 Database definitiva | Recurso | Definir nombre y schema para análisis inmobiliarios | Usuario (Fase 2) |
 | R2 Bucket definitivo | Recurso | Definir nombre y configuración de acceso | Usuario (Fase 2) |
 | Workflows | Recurso | Orquestación de prompts contra IA | Usuario (Fase 2) |
 | Integraciones externas | API | OpenAI, Anthropic u otros proveedores | Usuario (Fase 2) |
 | Autenticación de usuarios | Auth | No requerido para MVP | Usuario (Fase 3) |
 | CI/CD con GitHub Actions | Pipeline | No requerido según usuario | Usuario (opcional) |
+
+> **Nota:** El Worker backend (`wk-backend`) y la D1 Database (`db-cbconsulting`) ya están desplegados y activos.
 
 ---
 
@@ -311,18 +330,21 @@ wrangler secret put [SECRET_NAME] --env dev
 
 | Fecha | Cambio | Responsable | Aprobado Por |
 |-------|--------|-------------|--------------|
+| 2026-03-27 | Despliegue de menú dinámico v1: Worker `wk-backend`, D1 `db-cbconsulting`, binding `db_binding_01`, endpoint `/api/menu` | inventariador | usuario |
 | 2026-03-27 | Eliminación de recursos de prueba (Worker, D1, R2) | inventariador | usuario |
 | 2026-03-26 | Despliegue de frontend TailAdmin en Pages | inventariador | usuario |
 | 2026-03-26 | Fase 1: Creación de recursos de prueba (Worker, D1, R2, Pages) | inventariador | usuario |
 
 ---
 
-## 14. Estado Actual de Recursos (Post-Eliminación Fase 1)
+## 14. Estado Actual de Recursos
 
 | Recurso | Nombre | Estado | Notas |
 |---------|--------|--------|-------|
+| Worker | `wk-backend` | ✅ Activo | Backend API para menú dinámico v1 |
 | Worker | `worker-cbc-endes-dev` | ❌ Eliminado | Recurso de prueba temporal |
-| Pages | `pg-cbc-endes` | ✅ Activo | **SE MANTIENE** para producción |
+| Pages | `pg-cbc-endes` | ✅ Activo | Frontend en producción |
+| D1 Database | `db-cbconsulting` | ✅ Activo | Base de datos para menú dinámico |
 | D1 Database | `cbc-endes-db-test` | ❌ Eliminado | Recurso de prueba temporal |
 | R2 Bucket | `cbc-endes-storage-test` | ❌ Eliminado | Recurso de prueba temporal |
 
@@ -332,12 +354,14 @@ wrangler secret put [SECRET_NAME] --env dev
 
 La Fase 2 de definición y diseño del proyecto incluirá:
 
-1. **Definir nombres definitivos** de recursos (Worker, D1, R2)
-2. **Diseñar schema de base de datos** para análisis inmobiliarios
-3. **Diseñar endpoints de API** para gestión de proyectos
+1. **Definir nombre definitivo** de R2 Bucket
+2. **Ampliar schema de base de datos** para análisis inmobiliarios
+3. **Diseñar endpoints adicionales de API** para gestión de proyectos
 4. **Definir flujos de Workflow** para prompts de IA
 5. **Planificar integración con APIs de IA** (OpenAI, Anthropic, etc.)
-6. **Crear nuevos recursos** con nombres definitivos
+6. **Crear R2 Bucket** con nombre definitivo
+
+> **Nota:** El Worker backend (`wk-backend`) y la D1 Database (`db-cbconsulting`) ya están desplegados y activos como parte del menú dinámico v1.
 
 ---
 
@@ -353,4 +377,4 @@ La Fase 2 de definición y diseño del proyecto incluirá:
 
 ---
 
-> **Nota:** Este inventario refleja el estado actual del proyecto tras la eliminación de los recursos de prueba de la Fase 1. Solo se mantiene el proyecto Pages (`pg-cbc-endes`) que será utilizado para el frontend de producción. Los recursos definitivos se crearán en la Fase 2 de definición y diseño.
+> **Nota:** Este inventario refleja el estado actual del proyecto tras el despliegue del menú dinámico v1. Los recursos activos incluyen el Worker backend (`wk-backend`), la D1 Database (`db-cbconsulting`) y el proyecto Pages (`pg-cbc-endes`) para el frontend de producción.
