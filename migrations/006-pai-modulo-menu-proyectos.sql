@@ -6,7 +6,7 @@
 -- Inserción de Módulo Principal
 -- ============================================================
 
-INSERT INTO MOD_modulos_config (
+INSERT OR IGNORE INTO MOD_modulos_config (
   id,
   modulo_id,
   tipo_elemento,
@@ -40,7 +40,7 @@ VALUES (
 -- ============================================================
 
 -- Funciones principales del módulo Proyectos
-INSERT INTO MOD_modulos_config (
+INSERT OR IGNORE INTO MOD_modulos_config (
   id,
   modulo_id,
   tipo_elemento,

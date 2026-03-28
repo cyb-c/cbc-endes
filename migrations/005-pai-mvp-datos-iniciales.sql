@@ -9,8 +9,9 @@
 -- ============================================================================
 -- Insertar atributos iniciales
 -- ============================================================================
+-- P0.1 Corrección: Usar INSERT OR IGNORE para evitar UNIQUE constraint
 
-INSERT INTO PAI_ATR_atributos (ATR_codigo, ATR_nombre, ATR_descripcion, ATR_activo, ATR_orden, ATR_fecha_alta, ATR_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_ATR_atributos (ATR_codigo, ATR_nombre, ATR_descripcion, ATR_activo, ATR_orden, ATR_fecha_alta, ATR_fecha_actualizacion)
 VALUES
   ('ESTADO_PROYECTO', 'Estado del proyecto', 'Estado del proyecto PAI', 1, 1, datetime('now'), datetime('now')),
   ('MOTIVO_VALORACION', 'Motivo de valoración', 'Motivo para valoración positiva del proyecto', 1, 2, datetime('now'), datetime('now')),
@@ -23,7 +24,7 @@ VALUES
 -- ============================================================================
 
 -- Valores para ESTADO_PROYECTO
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'CREADO',
@@ -36,7 +37,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'ESTADO_PROYECTO';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'PROCESANDO_ANALISIS',
@@ -49,7 +50,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'ESTADO_PROYECTO';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'ANALISIS_CON_ERROR',
@@ -62,7 +63,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'ESTADO_PROYECTO';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'ANALISIS_FINALIZADO',
@@ -75,7 +76,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'ESTADO_PROYECTO';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'EVALUANDO_VIABILIDAD',
@@ -88,7 +89,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'ESTADO_PROYECTO';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'EVALUANDO_PLAN_NEGOCIO',
@@ -101,7 +102,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'ESTADO_PROYECTO';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'SEGUIMIENTO_COMERCIAL',
@@ -114,7 +115,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'ESTADO_PROYECTO';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'DESCARTADO',
@@ -128,7 +129,7 @@ SELECT
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'ESTADO_PROYECTO';
 
 -- Valores para MOTIVO_VALORACION
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'MV_SENTIDO_NEGOCIO_REAL',
@@ -141,7 +142,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'MOTIVO_VALORACION';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'MV_INFRAUTILIZADO',
@@ -154,7 +155,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'MOTIVO_VALORACION';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'MV_USO_ECONOMICO_RAZONABLE',
@@ -167,7 +168,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'MOTIVO_VALORACION';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'MV_MANTENER',
@@ -180,7 +181,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'MOTIVO_VALORACION';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'MV_TRANSFORMAR',
@@ -193,7 +194,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'MOTIVO_VALORACION';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'MV_RECONVERSION_DEFENDIBLE_VALENCIA',
@@ -206,7 +207,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'MOTIVO_VALORACION';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'MV_OPORTUNIDAD_TRANSFORMACION',
@@ -219,7 +220,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'MOTIVO_VALORACION';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'MV_OPORTUNIDAD_MANTENIMIENTO',
@@ -233,7 +234,7 @@ SELECT
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'MOTIVO_VALORACION';
 
 -- Valores para MOTIVO_DESCARTE
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'MD_SIN_SENTIDO_NEGOCIO_REAL',
@@ -246,7 +247,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'MOTIVO_DESCARTE';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'MD_NO_INFRAUTILIZADO_NI_MEJORABLE',
@@ -259,7 +260,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'MOTIVO_DESCARTE';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'MD_SIN_USO_ECONOMICO_RAZONABLE',
@@ -272,7 +273,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'MOTIVO_DESCARTE';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'MD_NO_CONVIENE_MANTENER',
@@ -285,7 +286,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'MOTIVO_DESCARTE';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'MD_NO_CONVIENE_TRANSFORMAR',
@@ -298,7 +299,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'MOTIVO_DESCARTE';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'MD_RECONVERSION_NO_DEFENDIBLE_VALENCIA',
@@ -311,7 +312,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'MOTIVO_DESCARTE';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'MD_SIN_OPORTUNIDAD_CLARA',
@@ -324,7 +325,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'MOTIVO_DESCARTE';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'MD_HIPOTESIS_NO_SOSTENIBLE',
@@ -338,7 +339,7 @@ SELECT
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'MOTIVO_DESCARTE';
 
 -- Valores para TIPO_NOTA
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'COMENTARIO',
@@ -351,7 +352,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'TIPO_NOTA';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'VALORACION',
@@ -364,7 +365,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'TIPO_NOTA';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'DECISION',
@@ -377,7 +378,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'TIPO_NOTA';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT
   ATR_id,
   'APRENDE_IA',
@@ -391,7 +392,7 @@ SELECT
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'TIPO_NOTA';
 
 -- Valor ACTIVO para TIPO_NOTA (requerido para crear notas - P0.1 Corrección Crítica)
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT
   ATR_id,
   'ACTIVO',
@@ -405,7 +406,7 @@ SELECT
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'TIPO_NOTA';
 
 -- Valores para TIPO_ARTEFACTO
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'DATOS_MD',
@@ -418,7 +419,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'TIPO_ARTEFACTO';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'ANALISIS_FISICO',
@@ -431,7 +432,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'TIPO_ARTEFACTO';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'ANALISIS_ESTRATEGICO',
@@ -444,7 +445,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'TIPO_ARTEFACTO';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'ANALISIS_FINANCIERO',
@@ -457,7 +458,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'TIPO_ARTEFACTO';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'ANALISIS_REGULATORIO',
@@ -470,7 +471,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'TIPO_ARTEFACTO';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'LECTURA_INVERSOR',
@@ -483,7 +484,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'TIPO_ARTEFACTO';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'LECTURA_OPERADOR',
@@ -496,7 +497,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'TIPO_ARTEFACTO';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'LECTURA_PROPIETARIO',
@@ -509,7 +510,7 @@ SELECT
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'TIPO_ARTEFACTO';
 
-INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+INSERT OR IGNORE INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
 SELECT 
   ATR_id,
   'LOG_CII_JSON',
