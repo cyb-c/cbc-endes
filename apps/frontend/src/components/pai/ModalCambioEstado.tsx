@@ -5,7 +5,6 @@
 import { useState } from 'react';
 import { paiApiClient } from '../../lib/pai-api';
 import type { ProyectoPAI, CambiarEstadoRequest, EstadoProyecto } from '../../types/pai';
-import { ESTADO_PROYECTO_LABELS } from '../../types/pai';
 
 interface ModalCambioEstadoProps {
   proyecto: ProyectoPAI;
@@ -21,11 +20,14 @@ export function ModalCambioEstado({ proyecto, onEstadoCambiado, onCancel }: Moda
   const [error, setError] = useState<string | null>(null);
 
   const estadosDisponibles: Array<{ value: string; label: string }> = [
-    { value: 'borrador', label: ESTADO_PROYECTO_LABELS.borrador },
-    { value: 'en_proceso', label: ESTADO_PROYECTO_LABELS.en_proceso },
-    { value: 'completado', label: ESTADO_PROYECTO_LABELS.completado },
-    { value: 'valorado', label: ESTADO_PROYECTO_LABELS.valorado },
-    { value: 'descartado', label: ESTADO_PROYECTO_LABELS.descartado },
+    { value: 'creado', label: 'Creado' },
+    { value: 'procesando_analisis', label: 'En Análisis' },
+    { value: 'analisis_con_error', label: 'Análisis con Error' },
+    { value: 'analisis_finalizado', label: 'Análisis Finalizado' },
+    { value: 'evaluando_viabilidad', label: 'Evaluando Viabilidad' },
+    { value: 'evaluando_plan_negocio', label: 'Evaluando Plan de Negocio' },
+    { value: 'seguimiento_comercial', label: 'Seguimiento Comercial' },
+    { value: 'descartado', label: 'Descartado' },
   ];
 
   const motivosValoracion = [
@@ -48,8 +50,8 @@ export function ModalCambioEstado({ proyecto, onEstadoCambiado, onCancel }: Moda
     { id: 7, nombre: 'Otros' },
   ];
 
-  const requiereMotivo = nuevoEstado === 'valorado' || nuevoEstado === 'descartado';
-  const motivos = nuevoEstado === 'valorado' ? motivosValoracion : motivosDescarte;
+  const requiereMotivo = nuevoEstado === 'descartado';
+  const motivos = nuevoEstado === 'descartado' ? motivosDescarte : motivosValoracion;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

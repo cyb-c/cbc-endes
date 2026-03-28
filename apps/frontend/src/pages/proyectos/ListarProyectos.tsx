@@ -13,7 +13,6 @@ export function ListarProyectos() {
   const [loading, setLoading] = useState(true);
   const [error, _setError] = useState<string | null>(null);
   const [filtros, setFiltros] = useState<ListarProyectosParams>({});
-  const [mostrarCrearModal, setMostrarCrearModal] = useState(false);
   // P1.1: Estado de paginación
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(20);
@@ -48,7 +47,7 @@ export function ListarProyectos() {
   };
 
   const handleCrearProyecto = () => {
-    setMostrarCrearModal(true);
+    window.location.href = '/proyectos/crear';
   };
 
   if (loading) return <div className="text-center py-8">Cargando proyectos...</div>;
@@ -212,10 +211,10 @@ export function ListarProyectos() {
       </div>
 
       {/* Paginación */}
-      {paginacionData && paginacionData.total_pages > 1 && (
+      {paginacionData && paginacionData.pages > 1 && (
         <Paginacion
           paginaActual={pagina}
-          totalPaginas={paginacionData.total_pages}
+          totalPaginas={paginacionData.pages}
           totalResultados={paginacionData.total}
           porPagina={porPagina}
           onPageChange={setPagina}
@@ -225,113 +224,6 @@ export function ListarProyectos() {
           }}
         />
       )}
-
-      {/* Modal de creación de proyecto */}
-      {mostrarCrearModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Crear Nuevo Proyecto</h2>
-              <button
-                onClick={() => setMostrarCrearModal(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                ✕
-              </button>
-            </div>
-            <FormularioCrearProyecto
-              onCreado={(proyecto) => {
-                setProyectos([proyecto, ...proyectos]);
-                setMostrarCrearModal(false);
-              }}
-              onCancel={() => setMostrarCrearModal(false)}
-            />
-          </div>
-        </div>
-      )}
     </div>
-  );
-}
-
-// Componente de formulario de creación de proyecto (inline)
-function FormularioCrearProyecto({ onCreado, onCancel }: { onCreado: (proyecto: ProyectoPAI) => void; onCancel: () => void }) {
-  const [ijson, setIjson] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!ijson.trim()) {
-      setError('El IJSON es obligatorio');
-      return;
-    }
-
-    // Validar JSON
-    try {
-      JSON.parse(ijson);
-    } catch {
-      setError('El IJSON no es un JSON válido');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    // Llamada a API para crear proyecto
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787'}/api/pai/proyectos`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ijson }),
-    });
-
-    setLoading(false);
-
-    if (response.ok) {
-      const data = await response.json();
-      onCreado(data.data.proyecto);
-    } else {
-      const data = await response.json();
-      setError(data.error?.message || 'Error al crear proyecto');
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-2">IJSON del Inmueble</label>
-        <textarea
-          value={ijson}
-          onChange={(e) => setIjson(e.target.value)}
-          placeholder='{"titulo": "...", ...}'
-          className="w-full h-64 p-3 border rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500"
-          disabled={loading}
-        />
-      </div>
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-red-800">
-          {error}
-        </div>
-      )}
-
-      <div className="flex justify-end space-x-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={loading}
-          className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
-        >
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          disabled={loading || !ijson.trim()}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-        >
-          {loading ? 'Creando...' : 'Crear Proyecto'}
-        </button>
-      </div>
-    </form>
   );
 }

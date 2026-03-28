@@ -7,7 +7,6 @@ import { useState, useEffect } from 'react';
 import { paiApiClient } from '../../lib/pai-api';
 import { useNotaEditable } from '../../hooks/useNotaEditable';
 import { FormularioNota } from './FormularioNota';
-import { FormularioEditarNota } from './FormularioEditarNota';
 import type { Nota } from '../../types/pai';
 
 interface ListaNotasProps {
@@ -25,10 +24,9 @@ interface NotaEditable extends Nota {
 export function ListaNotas({ proyectoId, estadoProyecto, onNotaEditada, onNotaEliminada }: ListaNotasProps) {
   const [notas, setNotas] = useState<NotaEditable[]>([]);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [notaEditando, setNotaEditando] = useState<NotaEditable | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Hook para verificar editabilidad
   const { verificar: verificarEditabilidad } = useNotaEditable(proyectoId);
 
@@ -67,12 +65,6 @@ export function ListaNotas({ proyectoId, estadoProyecto, onNotaEditada, onNotaEl
     onNotaEditada?.(nuevaNota);
   };
 
-  const handleNotaEditada = (notaActualizada: Nota) => {
-    setNotas(notas.map(n => n.id === notaActualizada.id ? notaActualizada : n));
-    setNotaEditando(null);
-    onNotaEditada?.(notaActualizada);
-  };
-
   const handleNotaEliminada = async (notaId: number) => {
     if (!confirm('¿Estás seguro de eliminar esta nota?')) return;
 
@@ -106,7 +98,7 @@ export function ListaNotas({ proyectoId, estadoProyecto, onNotaEditada, onNotaEl
         <div className="space-y-4">
           {notas.map((nota) => {
             const mostrarBotones = estadoProyecto !== 'descartado' && nota.esEditable !== false;
-            
+
             return (
             <div
               key={nota.id}
@@ -119,7 +111,7 @@ export function ListaNotas({ proyectoId, estadoProyecto, onNotaEditada, onNotaEl
                 {mostrarBotones ? (
                   <div className="space-x-2">
                     <button
-                      onClick={() => setNotaEditando(nota)}
+                      onClick={() => setMostrarFormulario(true)}
                       className="text-blue-600 hover:text-blue-800 text-sm"
                     >
                       Editar

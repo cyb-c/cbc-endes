@@ -108,6 +108,8 @@ export interface CambiarEstadoRequest {
 }
 
 export interface CrearNotaRequest {
+  tipo_nota_id: number;
+  autor: string;
   contenido: string;
 }
 

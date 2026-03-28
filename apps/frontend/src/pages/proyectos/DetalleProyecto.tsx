@@ -16,7 +16,6 @@ export function DetalleProyecto() {
   const [loading, setLoading] = useState(true);
   const [error, _setError] = useState<string | null>(null);
   const [mostrarModalEstado, setMostrarModalEstado] = useState(false);
-  const [pestañaActiva, setPestañaActiva] = useState('resumen');
 
   const { obtenerProyecto } = useObtenerProyecto();
   const { ejecutarAnalisis, loading: loadingEjecutar } = useEjecutarAnalisis();
@@ -91,7 +90,7 @@ export function DetalleProyecto() {
             >
               Cambiar Estado
             </button>
-            {proyecto.estado !== 'en_proceso' && (
+            {proyecto.estado !== 'procesando_analisis' && (
               <button
                 onClick={handleEjecutarAnalisis}
                 disabled={loadingEjecutar}

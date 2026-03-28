@@ -27,7 +27,7 @@ export function useNotaEditable(proyectoId: number): UseNotaEditableResult {
   const [loading, setLoading] = useState(false);
   const [razon, setRazon] = useState<string | undefined>(undefined);
 
-  const verificar = useCallback(async (notaId: number, fechaCreacion: string) => {
+  const verificar = useCallback(async (_notaId: number, fechaCreacion: string) => {
     setLoading(true);
     setRazon(undefined);
 

@@ -5,7 +5,7 @@
  * P2.1 Mejora: Soporte multiidioma completo
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 import type { Locale } from '../i18n';
 
 const DEFAULT_LOCALE: Locale = 'es-ES';

@@ -42,11 +42,11 @@ export function VisualizadorMarkdown({ contenido, className = '' }: Visualizador
           blockquote: ({ node, ...props }) => (
             <blockquote className="border-l-4 border-blue-500 pl-4 my-4 italic text-gray-600" {...props} />
           ),
-          code: ({ node, inline, ...props }) => (
-            inline ? (
-              <code className="bg-gray-100 rounded px-1.5 py-0.5 text-sm font-mono text-gray-800" {...props} />
-            ) : (
+          code: ({ ...props }) => (
+            props.children ? (
               <code className="block bg-gray-50 rounded-lg p-4 my-3 overflow-x-auto text-sm font-mono text-gray-800" {...props} />
+            ) : (
+              <code className="bg-gray-100 rounded px-1.5 py-0.5 text-sm font-mono text-gray-800" {...props} />
             )
           ),
           pre: ({ node, ...props }) => (
