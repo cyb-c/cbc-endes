@@ -123,14 +123,14 @@ export async function handleCrearProyecto(c: AppContext): Promise<Response> {
       .run()
     
     const proyectoId = insertResult.meta.last_row_id
-    
+
     // Generar y actualizar CII
     const cii = generateCII(proyectoId)
     await db
-      .prepare('UPDATE PAI_PRO_proyectos SET PRO_cii = ? WHERE PRO_id = ?')
-      .bind(cii, proyectoId)
+      .prepare('UPDATE PAI_PRO_proyectos SET PRO_cii = ?, PRO_ijson = ? WHERE PRO_id = ?')
+      .bind(cii, ijson, proyectoId)
       .run()
-    
+
     // Registrar eventos de pipeline
     await insertPipelineEvent(db, {
       entityId: `proyecto-${proyectoId}`,

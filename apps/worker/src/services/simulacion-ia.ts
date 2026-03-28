@@ -229,26 +229,26 @@ async function validarEstadoParaReejecucion(
   proyectoId: number,
 ): Promise<{ permitido: boolean; razon?: string }> {
   const proyecto = await db
-    .prepare('SELECT estado_id FROM PAI_PRO_proyectos WHERE id = ?')
+    .prepare('SELECT PRO_estado_val_id as estado_id FROM PAI_PRO_proyectos WHERE PRO_id = ?')
     .bind(proyectoId)
     .first()
-  
+
   if (!proyecto) {
     return { permitido: false, razon: 'Proyecto no encontrado' }
   }
-  
+
   const estadosPermitidos = [3, 5, 6, 7] // PENDIENTE_REVISION, EVALUANDO_VIABILIDAD, EVALUANDO_PLAN_NEGOCIO, SEGUIMIENTO_COMERCIAL
   const estadosNoPermitidos = [1, 2, 4, 8, 9] // NUEVO, EN_ANALISIS, APROBADO, RECHAZADO, ANALISIS_CON_ERROR
-  
+
   const estadoId = proyecto.estado_id as number
   if (estadosNoPermitidos.includes(estadoId)) {
     return { permitido: false, razon: 'El estado actual no permite re-ejecución' }
   }
-  
+
   if (estadosPermitidos.includes(estadoId)) {
     return { permitido: true }
   }
-  
+
   return { permitido: false, razon: 'Estado desconocido' }
 }
 
@@ -423,14 +423,18 @@ export async function ejecutarAnalisisCompleto(
             throw new Error(`No se encontró VAL_id para VAL_codigo: ${valCodigo}`)
           }
 
+          // Extraer nombre del artefacto desde la ruta (ej: "resumen-ejecutivo" desde "analisis-inmuebles/26030002/26030002_resumen-ejecutivo.md")
+          const artefactoNombre = resultado.key.split('/').pop()?.replace(/\.md$/, '') || 'artefacto'
+
           await db
             .prepare(`
-              INSERT INTO PAI_ART_artefactos (ART_proyecto_id, ART_tipo_val_id, ART_ruta, ART_fecha_generacion)
-              VALUES (?, ?, ?, ?)
+              INSERT INTO PAI_ART_artefactos (ART_proyecto_id, ART_tipo_val_id, ART_nombre, ART_ruta, ART_fecha_generacion)
+              VALUES (?, ?, ?, ?, ?)
             `)
             .bind(
               proyectoId,
               valId,
+              artefactoNombre,
               resultado.key,
               new Date().toISOString(),
             )
@@ -445,12 +449,12 @@ export async function ejecutarAnalisisCompleto(
           detalle: 'Artefactos registrados en base de datos',
         })
 
-        // 8. Actualizar estado a PENDIENTE_REVISION
+        // 8. Actualizar estado a PENDIENTE_REVISION (VAL_id=3)
         await db
           .prepare(`
             UPDATE PAI_PRO_proyectos
-            SET estado_id = ?, fecha_ultima_actualizacion = ?
-            WHERE id = ?
+            SET PRO_estado_val_id = ?, PRO_fecha_ultima_actualizacion = ?
+            WHERE PRO_id = ?
           `)
           .bind(3, new Date().toISOString(), proyectoId)
           .run()
@@ -627,19 +631,23 @@ export async function reejecutarAnalisis(
       const tipo = extractTipoFromKey(resultado.key)
       const valCodigo = mapTipoToVALCodigo(tipo)
       const valId = await getVALIdForCodigo(db, valCodigo)
-      
+
       if (!valId) {
         throw new Error(`No se encontró VAL_id para VAL_codigo: ${valCodigo}`)
       }
-      
+
+      // Extraer nombre del artefacto desde la ruta
+      const artefactoNombre = resultado.key.split('/').pop()?.replace(/\.md$/, '') || 'artefacto'
+
       await db
         .prepare(`
-          INSERT INTO PAI_ART_artefactos (ART_proyecto_id, ART_tipo_val_id, ART_ruta, ART_fecha_generacion)
-          VALUES (?, ?, ?, ?)
+          INSERT INTO PAI_ART_artefactos (ART_proyecto_id, ART_tipo_val_id, ART_nombre, ART_ruta, ART_fecha_generacion)
+          VALUES (?, ?, ?, ?, ?)
         `)
         .bind(
           proyectoId,
           valId,
+          artefactoNombre,
           resultado.key,
           new Date().toISOString(),
         )
@@ -653,17 +661,17 @@ export async function reejecutarAnalisis(
       tipoEvento: 'STEP_SUCCESS',
       detalle: 'Nuevos artefactos registrados en base de datos',
     })
-    
-    // 9. Actualizar estado a PENDIENTE_REVISION
+
+    // 9. Actualizar estado a PENDIENTE_REVISION (VAL_id=3)
     await db
       .prepare(`
         UPDATE PAI_PRO_proyectos
-        SET estado_id = ?, fecha_ultima_actualizacion = ?
-        WHERE id = ?
+        SET PRO_estado_val_id = ?, PRO_fecha_ultima_actualizacion = ?
+        WHERE PRO_id = ?
       `)
       .bind(3, new Date().toISOString(), proyectoId)
       .run()
-    
+
     await insertPipelineEvent(db, {
       entityId,
       paso: 'actualizar_estado',
