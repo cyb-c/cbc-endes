@@ -1,9 +1,9 @@
 # Inventario de Recursos y Configuración
 
 > **Finalidad:** Fuente única de verdad para recursos Cloudflare, CI/CD, bindings, variables de entorno y configuración operativa del proyecto.
-> **Versión:** 8.0
+> **Versión:** 9.0
 > **Importante:** Este archivo es gestionado exclusivamente por el agente `inventariador`. Las modificaciones directas serán rechazadas.
-> **Última actualización:** 2026-03-27 (FASE 2: Backend - Core Funcional)
+> **Última actualización:** 2026-03-28 (FASE 4: Integración y Pruebas)
 
 ---
 
@@ -81,12 +81,12 @@
 
 ### 4.1 Workers
 
-| Nombre | Binding | App/Proyecto | Puerto Dev | Estado CF | Último Deploy | Notas |
-|--------|---------|--------------|------------|-----------|---------------|-------|
-| `wk-backend` | `db_binding_01, r2_binding_01` | Backend API (dev) | 8787 | ✅ | 2026-03-27 | FASE 2 Backend Core Funcional completada (10 endpoints PAI, Servicio Simulación IA, Handlers Proyectos/Notas) |
-| `worker-cbc-endes-dev` | N/A | Backend API (dev) | 8787 | ❌ Eliminado | 2026-03-26 | Recurso de prueba eliminado |
+| Nombre | Binding | App/Proyecto | Puerto Dev | Estado CF | URL Producción | Último Deploy | Notas |
+|--------|---------|--------------|------------|-----------|----------------|---------------|-------|
+| `wk-backend` | `db_binding_01, r2_binding_01` | Backend API (dev) | 8787 | ✅ | https://wk-backend-dev.cbconsulting.workers.dev | 2026-03-28 | FASE 4: Integración y Pruebas completada (10 endpoints PAI, Servicio Simulación IA, Handlers Proyectos/Notas, Migraciones 007 y 008 aplicadas) |
+| `worker-cbc-endes-dev` | N/A | Backend API (dev) | 8787 | ❌ Eliminado | - | 2026-03-26 | Recurso de prueba eliminado |
 
-**Nota:** El Worker `wk-backend` está activo y proporciona endpoints para el menú dinámico. El Worker de prueba `worker-cbc-endes-dev` fue eliminado el 2026-03-27.
+**Nota:** El Worker `wk-backend` está activo y proporciona endpoints para el menú dinámico y PAI. El Worker de prueba `worker-cbc-endes-dev` fue eliminado el 2026-03-27.
 
 ### 4.2 KV Namespaces
 
@@ -98,10 +98,17 @@
 
 | Nombre | Binding | App | ID | Estado | Notas |
 |--------|---------|-----|----|--------|-------|
-| `db-cbconsulting` | `db_binding_01` | `wk-backend` | `fafcd5e2-b960-49f7-8502-88a0f8ba5052` | ✅ | Menú dinámico v1 |
+| `db-cbconsulting` | `db_binding_01` | `wk-backend` | `fafcd5e2-b960-49f7-8502-88a0f8ba5052` | ✅ | Menú dinámico v1 + PAI (tablas PAI_PRO_proyectos, PAI_VAL_valores modificadas en FASE 4) |
 | `cbc-endes-db-test` | DB | worker-cbc-endes | `22892bef-3878-4ef0-bd7d-d28bc9656914` | ❌ Eliminada | Recurso de prueba eliminado |
 
-**Nota:** La D1 Database `db-cbconsulting` está activa y contiene la tabla `MOD_modulos_config`. La base de datos de prueba `cbc-endes-db-test` fue eliminada el 2026-03-27.
+**Nota:** La D1 Database `db-cbconsulting` está activa y contiene las tablas del menú dinámico y PAI. Cambios en FASE 4:
+- Tabla `PAI_PRO_proyectos`: Agregada columna `PRO_fecha_ultima_actualizacion`
+- Tabla `PAI_VAL_valores`: Agregado valor `RESUMEN_EJECUTIVO` (VAL_id: 38, VAL_atr_id: 5)
+
+**Problemas conocidos:**
+- Falta columna `PRO_ijson` en `PAI_PRO_proyectos` (requerida para análisis)
+- Falta valor `ACTIVO` para `TIPO_NOTA` (requerido para crear notas)
+- Migración `005-pai-mvp-datos-iniciales.sql` falló con error de UNIQUE constraint
 
 ### 4.4 Buckets R2
 
@@ -142,16 +149,23 @@
 
 ### 4.9 Cloudflare Pages / Frontend
 
-| Proyecto | URL | App Asociada | Proveedor Git | Estado |
-|----------|-----|--------------|---------------|--------|
-| `pg-cbc-endes` | https://d00e4cdb.pg-cbc-endes.pages.dev/ | TailAdmin React | GitHub | ✅ |
+| Proyecto | URL Producción | URL Preview | App Asociada | Proveedor Git | Estado |
+|----------|----------------|-------------|--------------|---------------|--------|
+| `pg-cbc-endes` | https://388b71e5.pg-cbc-endes.pages.dev | https://d00e4cdb.pg-cbc-endes.pages.dev | TailAdmin React + PAI | GitHub | ✅ |
 
 **Configuración:**
 - Production branch: `main`
 - Build output dir: `dist`
 - Framework: React + Vite + Tailwind CSS
+- Build command: `npm run build`
 
-**Nota:** Pages es el ÚNICO recurso mantenido de la Fase 1.
+**Cambios en FASE 4:**
+- Implementación de sistema i18n con archivos `es-ES.ts` e `index.ts`
+- Archivo `.env.production` creado con variables de entorno para producción
+- Correcciones de TypeScript en múltiples archivos del frontend
+- Despliegue exitoso a Cloudflare Pages (2026-03-28)
+
+**Nota:** Pages es el ÚNICO recurso mantenido de la Fase 1. En FASE 4 se integró el módulo PAI con i18n.
 
 ---
 
@@ -198,10 +212,12 @@
 
 ### `pg-cbc-endes` (Frontend Pages)
 
-| Variable | Tipo | Sensible | Descripción | Estado |
-|----------|------|----------|-------------|--------|
-| `VITE_API_BASE_URL` | String | No | URL base del backend API | ✅ |
-| `VITE_ENVIRONMENT` | String | No | Entorno (dev/preview/production) | ✅ |
+| Variable | Tipo | Sensible | Descripción | Estado | Valor Producción |
+|----------|------|----------|-------------|--------|------------------|
+| `VITE_API_BASE_URL` | String | No | URL base del backend API | ✅ | https://wk-backend-dev.cbconsulting.workers.dev |
+| `VITE_ENVIRONMENT` | String | No | Entorno (dev/preview/production) | ✅ | production |
+
+**Archivo de configuración:** `apps/frontend/.env.production` (creado en FASE 4)
 
 ---
 
@@ -305,7 +321,10 @@ wrangler d1 migrations list db-cbconsulting
 - `002-menu-dinamico-v1.sql` - Crea tabla `MOD_modulos_config` para menú dinámico
 - `003-pipeline-events.sql` - Crea tabla `pipeline_eventos` para tracking de eventos del pipeline
 - `004-pai-mvp.sql` - Crea tablas PAI (PAI_ATR_atributos, PAI_VAL_valores, PAI_PRO_proyectos, PAI_NOT_notas, PAI_ART_artefactos) para gestión de proyectos de análisis inmobiliarios
-- `005-pai-mvp-datos-iniciales.sql` - Datos iniciales para tablas PAI (37 registros en PAI_VAL_valores)
+- `005-pai-mvp-datos-iniciales.sql` - Datos iniciales para tablas PAI (37 registros en PAI_VAL_valores) ⚠️ FALLÓ (UNIQUE constraint)
+- `006-pai-modulo-menu-proyectos.sql` - Agrega módulo "Proyectos" al menú dinámico
+- `007-pai-agregar-columna-fecha-ultima-actualizacion.sql` - Agrega columna `PRO_fecha_ultima_actualizacion` a PAI_PRO_proyectos (FASE 4)
+- `008-pai-agregar-valor-resumen-ejecutivo.sql` - Agrega valor `RESUMEN_EJECUTIVO` a PAI_VAL_valores (FASE 4)
 
 ### 10.4 Gestión de Secrets
 
@@ -341,13 +360,17 @@ wrangler secret put [SECRET_NAME] --env dev
 
 | Elemento | Tipo | Observaciones | Responsable |
 |----------|------|---------------|-------------|
+| Columna PRO_ijson | Base de Datos | Falta columna en PAI_PRO_proyectos (requerida para análisis) | Pendiente de corrección |
+| Valor ACTIVO para TIPO_NOTA | Base de Datos | No hay valores con VAL_es_default = 1 para TIPO_NOTA (requerido para crear notas) | Pendiente de corrección |
+| Error endpoint cambio de estado | Backend | Endpoint `/api/pai/proyectos/:id/estado` retorna "Error interno del servidor" | Pendiente de investigación |
+| Migración 005 | Base de Datos | Falla con error de UNIQUE constraint en PAI_VAL_valores | Pendiente de corrección |
 | R2 Bucket definitivo | Recurso | Definir nombre y configuración de acceso | Usuario (Fase 2) |
 | Workflows | Recurso | Orquestación de prompts contra IA | Usuario (Fase 2) |
 | Integraciones externas | API | OpenAI, Anthropic u otros proveedores | Usuario (Fase 2) |
 | Autenticación de usuarios | Auth | No requerido para MVP | Usuario (Fase 3) |
 | CI/CD con GitHub Actions | Pipeline | No requerido según usuario | Usuario (opcional) |
 
-> **Nota:** El Worker backend (`wk-backend`) y la D1 Database (`db-cbconsulting`) ya están desplegados y activos.
+> **Nota:** El Worker backend (`wk-backend`) y la D1 Database (`db-cbconsulting`) están desplegados y activos. Los 4 primeros vacíos fueron identificados durante las pruebas E2E de FASE 4.
 
 ---
 
@@ -355,6 +378,7 @@ wrangler secret put [SECRET_NAME] --env dev
 
 | Fecha | Cambio | Responsable | Aprobado Por |
 |-------|--------|-------------|--------------|
+| 2026-03-28 | Actualización v9.0 - FASE 4: Integración y Pruebas completada (i18n, .env.production, Migraciones 007/008, Despliegue Pages, Pruebas E2E) | inventariador | Pendiente aprobación usuario |
 | 2026-03-27 | Actualización v7.0 - FASE 1 PAI completada: Pipeline Events, Esquema PAI (PRO/ATR/VAL/NOT/ART), R2 Storage | Orchestrator | Aprobado |
 | 2026-03-27 | Despliegue de menú dinámico v1: Worker `wk-backend`, D1 `db-cbconsulting`, binding `db_binding_01`, endpoint `/api/menu` | inventariador | usuario |
 | 2026-03-27 | Eliminación de recursos de prueba (Worker, D1, R2) | inventariador | usuario |
@@ -367,28 +391,26 @@ wrangler secret put [SECRET_NAME] --env dev
 
 | Recurso | Nombre | Estado | Notas |
 |---------|--------|--------|-------|
-| Worker | `wk-backend` | ✅ Activo | Backend API para FASE 2 (Backend Core Funcional) - 10 endpoints PAI implementados |
+| Worker | `wk-backend` | ✅ Activo | Backend API para FASE 4 (Integración y Pruebas) - 10 endpoints PAI implementados, Migraciones 007/008 aplicadas |
 | Worker | `worker-cbc-endes-dev` | ❌ Eliminado | Recurso de prueba temporal |
-| Pages | `pg-cbc-endes` | ✅ Activo | Frontend en producción |
-| D1 Database | `db-cbconsulting` | ✅ Activo | Base de datos para menú dinámico y PAI |
+| Pages | `pg-cbc-endes` | ✅ Activo | Frontend en producción con i18n (es-ES) y módulo PAI integrado |
+| D1 Database | `db-cbconsulting` | ✅ Activo | Base de datos para menú dinámico y PAI (tablas PAI_PRO_proyectos y PAI_VAL_valores modificadas en FASE 4) |
 | D1 Database | `cbc-endes-db-test` | ❌ Eliminado | Recurso de prueba temporal |
 | R2 Bucket | `r2-cbconsulting` | ✅ Activo | Bucket R2 para almacenamiento de archivos PAI |
 | R2 Bucket | `cbc-endes-storage-test` | ❌ Eliminado | Recurso de prueba temporal |
 
 ---
 
-## 15. Próximos Pasos (Fase 3)
+## 15. Próximos Pasos (Corrección de Problemas Identificados en FASE 4)
 
-La Fase 3 de desarrollo incluirá:
+Los siguientes problemas estructurales fueron identificados durante las pruebas E2E y requieren corrección:
 
-1. **Añadir módulo "Proyectos" al menú dinámico** en la tabla `MOD_modulos_config`
-2. **Implementar sección Proyectos PAI** en el frontend
-3. **Implementar formulario de creación de proyecto** con validación de IJSON
-4. **Implementar página de detalle de proyecto PAI** con visualización de artefactos y notas
-5. **Implementar componentes de notas** (crear, editar, listar)
-6. **Implementar modal de cambio de estado** con selección de motivos
+1. **Agregar columna PRO_ijson a PAI_PRO_proyectos** - La tabla PAI_PRO_proyectos no tiene la columna PRO_ijson. El código espera recuperar el IJSON de esta columna para ejecutar el análisis.
+2. **Agregar valor ACTIVO para TIPO_NOTA** - No hay valores con VAL_es_default = 1 para el atributo TIPO_NOTA. El código busca un valor activo por defecto para crear notas.
+3. **Investigar error en endpoint de cambio de estado** - El endpoint `/api/pai/proyectos/:id/estado` retorna "Error interno del servidor".
+4. **Corregir migración 005** - La migración 005-pai-mvp-datos-iniciales.sql falla con error de UNIQUE constraint en la tabla PAI_VAL_valores.
 
-> **Nota:** El Worker backend (`wk-backend`) y la D1 Database (`db-cbconsulting`) ya están desplegados y activos con todos los endpoints PAI implementados. El backend está listo para ser consumido por el frontend.
+> **Nota:** El Worker backend (`wk-backend`) y la D1 Database (`db-cbconsulting`) están desplegados y activos con todos los endpoints PAI implementados. El frontend está desplegado en Cloudflare Pages con i18n integrado. Las pruebas E2E mostraron 2/10 casos aprobados (20%).
 
 ---
 
@@ -404,4 +426,4 @@ La Fase 3 de desarrollo incluirá:
 
 ---
 
-> **Nota:** Este inventario refleja el estado actual del proyecto tras la finalización de FASE 2 (Backend - Core Funcional). Los recursos activos incluyen el Worker backend (`wk-backend`) con 10 endpoints PAI implementados, la D1 Database (`db-cbconsulting`) con tablas PAI creadas y datos iniciales (37 registros), el bucket R2 (`r2-cbconsulting`) para almacenamiento de artefactos, y el proyecto Pages (`pg-cbc-endes`) para el frontend de producción.
+> **Nota:** Este inventario refleja el estado actual del proyecto tras la finalización de FASE 4 (Integración y Pruebas). Los recursos activos incluyen el Worker backend (`wk-backend`) con 10 endpoints PAI implementados y migraciones 007/008 aplicadas, la D1 Database (`db-cbconsulting`) con tablas PAI modificadas (columna PRO_fecha_ultima_actualizacion agregada, valor RESUMEN_EJECUTIVO agregado), el bucket R2 (`r2-cbconsulting`) para almacenamiento de artefactos, y el proyecto Pages (`pg-cbc-endes`) con frontend desplegado en producción (https://388b71e5.pg-cbc-endes.pages.dev) e i18n implementado. Las pruebas E2E mostraron 2/10 casos aprobados (20%) con 4 problemas estructurales identificados y pendientes de corrección.

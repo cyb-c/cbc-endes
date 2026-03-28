@@ -15,7 +15,7 @@ interface DetalleProyectoProps {
 export function DetalleProyecto({ id }: DetalleProyectoProps) {
   const [proyecto, setProyecto] = useState<ProyectoPAI | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, _setError] = useState<string | null>(null);
   const [mostrarModalEstado, setMostrarModalEstado] = useState(false);
   const [pestañaActiva, setPestañaActiva] = useState('resumen');
 

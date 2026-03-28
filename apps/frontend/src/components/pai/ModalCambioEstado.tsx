@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { paiApiClient } from '../../lib/pai-api';
-import type { ProyectoPAI, CambiarEstadoRequest } from '../../types/pai';
+import type { ProyectoPAI, CambiarEstadoRequest, EstadoProyecto } from '../../types/pai';
 import { ESTADO_PROYECTO_LABELS } from '../../types/pai';
 
 interface ModalCambioEstadoProps {
@@ -95,7 +95,7 @@ export function ModalCambioEstado({ proyecto, onEstadoCambiado, onCancel }: Moda
             <label className="block text-sm font-medium mb-2">Nuevo Estado</label>
             <select
               value={nuevoEstado}
-              onChange={(e) => setNuevoEstado(e.target.value)}
+              onChange={(e) => setNuevoEstado(e.target.value as EstadoProyecto)}
               className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
               disabled={loading}
             >

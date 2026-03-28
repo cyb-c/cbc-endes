@@ -85,6 +85,7 @@ export interface CrearProyectoRequest {
 }
 
 export interface ListarProyectosParams {
+  titulo?: string;
   estado?: string;
   tipo_inmueble?: string;
   ciudad?: string;

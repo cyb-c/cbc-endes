@@ -7,7 +7,6 @@ import { paiApiClient } from '../../lib/pai-api';
 import { FormularioNota } from './FormularioNota';
 import { FormularioEditarNota } from './FormularioEditarNota';
 import type { Nota } from '../../types/pai';
-import { ESTADO_PROYECTO_LABELS } from '../../types/pai';
 
 interface ListaNotasProps {
   proyectoId: number;

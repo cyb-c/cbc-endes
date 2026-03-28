@@ -9,11 +9,11 @@ import { ESTADO_PROYECTO_LABELS, ESTADO_PROYECTO_COLORS, type ProyectoPAI, type 
 export function ListarProyectos() {
   const [proyectos, setProyectos] = useState<ProyectoPAI[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, _setError] = useState<string | null>(null);
   const [filtros, setFiltros] = useState<ListarProyectosParams>({});
   const [mostrarCrearModal, setMostrarCrearModal] = useState(false);
 
-  const { listarProyectos, loading: loadingListar, error: errorListar } = useListarProyectos();
+  const { listarProyectos } = useListarProyectos();
 
   useEffect(() => {
     cargarProyectos();

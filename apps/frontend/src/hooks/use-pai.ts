@@ -9,13 +9,11 @@ import type {
   CrearProyectoRequest,
   ListarProyectosParams,
   ListarProyectosResponse,
-  Nota,
   CrearNotaRequest,
   EditarNotaRequest,
   CambiarEstadoRequest,
   Artefacto,
   PipelineEvent,
-  ApiResponse,
 } from '../types/pai';
 
 // ============================================================================

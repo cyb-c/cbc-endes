@@ -6,7 +6,6 @@
 import type {
   ApiResponse,
   ApiError,
-  ProyectoPAI,
   CrearProyectoRequest,
   CrearProyectoResponse,
   ListarProyectosParams,
@@ -14,7 +13,6 @@ import type {
   ObtenerProyectoResponse,
   EjecutarAnalisisResponse,
   ObtenerArtefactosResponse,
-  Nota,
   CrearNotaRequest,
   CrearNotaResponse,
   EditarNotaRequest,
