@@ -15,6 +15,7 @@ import type { Env } from '../env'
 type AppBindings = {
   db_binding_01: D1Database
   r2_binding_01: R2Bucket
+  secrets_kv: KVNamespace
 }
 
 type AppContext = Context<{ Bindings: AppBindings }>

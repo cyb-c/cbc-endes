@@ -13,6 +13,10 @@ migrations_dir = "../../migrations"
 binding = "r2_binding_01"
 bucket_name = "r2-cbconsulting"
 
+[[kv_namespaces]]
+binding = "secrets_kv"
+id = "50eb21ab606d4fd5a409e532347cf686"
+
 [env.dev]
 name = "wk-backend-dev"
 
@@ -25,3 +29,7 @@ migrations_dir = "../../migrations"
 [[env.dev.r2_buckets]]
 binding = "r2_binding_01"
 bucket_name = "r2-cbconsulting"
+
+[[env.dev.kv_namespaces]]
+binding = "secrets_kv"
+id = "50eb21ab606d4fd5a409e532347cf686"

@@ -8,16 +8,19 @@
  */
 
 import { Context } from 'hono'
-import { getDB, getR2Bucket } from '../env'
+import { getDB, getR2Bucket, getSecretsKV } from '../env'
 import { generateCII } from '../lib/r2-storage'
 import { ejecutarAnalisisCompleto, reejecutarAnalisis } from '../services/simulacion-ia'
+import { crearProyectoConIA } from '../services/ia-creacion-proyectos'
 import { insertPipelineEvent, getEntityEvents } from '../lib/pipeline-events'
 import { deleteProjectFolder } from '../lib/r2-storage'
 import type { Env } from '../env'
+import { iniciarTracking, completarTracking, generarLogJSON, registrarEvento, registrarError } from '../lib/tracking'
 
 type AppBindings = {
   db_binding_01: D1Database
   r2_binding_01: R2Bucket
+  secrets_kv: KVNamespace
 }
 
 type AppContext = Context<{ Bindings: AppBindings }>
@@ -67,20 +70,62 @@ function validarIJSON(ijson: string): { valido: boolean; error?: string; parsed?
 
 export async function handleCrearProyecto(c: AppContext): Promise<Response> {
   const db = getDB(c.env)
+  const r2Bucket = getR2Bucket(c.env)
   
+  // Iniciar tracking
+  const trackingId = `crear-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
+  const tracking = iniciarTracking(trackingId)
+  
+  registrarEvento(tracking, 'handler-inicio', 'INFO', 'Iniciando handler de creación de proyecto')
+
   try {
     const body = await c.req.json<{ ijson: string }>()
     const { ijson } = body
     
+    registrarEvento(tracking, 'request-received', 'INFO', 'Request recibido', {
+      ijson_length: ijson.length,
+      ijson_preview: ijson.substring(0, 100),
+    })
+
     // Validar IJSON
+    registrarEvento(tracking, 'validar-ijson', 'INFO', 'Validando IJSON')
     const validacion = validarIJSON(ijson)
     if (!validacion.valido) {
+      registrarError(tracking, 'validar-ijson-fallido', new Error(validacion.error || 'IJSON inválido'))
+      completarTracking(tracking)
+      await generarLogJSON(c.env, tracking)
       return c.json({ error: validacion.error }, 400)
     }
     
-    const ijsonParsed = validacion.parsed!
+    registrarEvento(tracking, 'validar-ijson-ok', 'INFO', 'IJSON válido')
+
+    // Ejecutar IA para extraer datos y generar resumen ejecutivo
+    registrarEvento(tracking, 'ia-inicio', 'INFO', 'Iniciando extracción con IA')
+    const iaResult = await crearProyectoConIA(c.env, tracking, ijson)
+
+    if (!iaResult.exito || !iaResult.datos) {
+      registrarError(tracking, 'ia-fallido', new Error(iaResult.error_mensaje || 'Error en IA'), {
+        error_codigo: iaResult.error_codigo,
+      })
+      completarTracking(tracking)
+      const logJson = await generarLogJSON(c.env, tracking)
+      return c.json({
+        error: iaResult.error_mensaje || 'Error al procesar IJSON con IA',
+        error_codigo: iaResult.error_codigo,
+        tracking_id: trackingId,
+        log: JSON.parse(logJson),
+      }, 500)
+    }
     
+    registrarEvento(tracking, 'ia-completado', 'INFO', 'IA completada exitosamente', {
+      titulo: iaResult.datos.pro_titulo,
+      ciudad: iaResult.datos.pro_ciudad,
+    })
+
+    const datosExtraidos = iaResult.datos
+
     // Obtener estado CREADO (primer estado)
+    registrarEvento(tracking, 'db-obtener-estado', 'INFO', 'Obteniendo estado CREADO')
     const estadoResult = await db
       .prepare(`
         SELECT v.VAL_id
@@ -89,57 +134,77 @@ export async function handleCrearProyecto(c: AppContext): Promise<Response> {
         WHERE a.ATR_codigo = 'ESTADO_PROYECTO' AND v.VAL_codigo = 'CREADO'
       `)
       .first()
-    
+
     if (!estadoResult) {
+      registrarError(tracking, 'db-estado-no-encontrado', new Error('Estado CREADO no encontrado'))
+      completarTracking(tracking)
+      await generarLogJSON(c.env, tracking)
       return c.json({ error: 'Estado CREADO no encontrado' }, 500)
     }
     
+    registrarEvento(tracking, 'db-estado-ok', 'INFO', 'Estado CREADO encontrado', {
+      estado_id: estadoResult.VAL_id,
+    })
+
     const estadoId = estadoResult.VAL_id as number
-    
-    // Insertar proyecto
+
+    // Insertar proyecto con datos extraídos por IA
+    registrarEvento(tracking, 'db-insert-inicio', 'INFO', 'Insertando proyecto en BD')
     const insertResult = await db
       .prepare(`
         INSERT INTO PAI_PRO_proyectos (
           PRO_cii, PRO_titulo, PRO_estado_val_id,
           PRO_portal_nombre, PRO_portal_url, PRO_operacion,
           PRO_tipo_inmueble, PRO_precio, PRO_superficie_construida_m2,
-          PRO_ciudad, PRO_barrio_distrito, PRO_direccion
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          PRO_ciudad, PRO_barrio_distrito, PRO_direccion,
+          PRO_resumen_ejecutivo
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
       .bind(
         '', // CII se generará después
-        ijsonParsed.titulo_anuncio as string,
+        datosExtraidos.pro_titulo,
         estadoId,
-        ijsonParsed.portal_nombre as string || 'Desconocido',
-        ijsonParsed.url_anuncio as string || '',
-        ijsonParsed.operacion as string || 'venta',
-        ijsonParsed.tipo_inmueble as string,
-        ijsonParsed.precio as string,
-        ijsonParsed.superficie_construida_m2 as string || '0',
-        ijsonParsed.ciudad as string || '',
-        ijsonParsed.barrio_distrito as string || null,
-        ijsonParsed.direccion as string || null,
+        datosExtraidos.pro_portal_nombre,
+        datosExtraidos.pro_portal_url,
+        datosExtraidos.pro_operacion,
+        datosExtraidos.pro_tipo_inmueble,
+        datosExtraidos.pro_precio,
+        datosExtraidos.pro_superficie_construida_m2,
+        datosExtraidos.pro_ciudad,
+        datosExtraidos.pro_barrio_distrito,
+        datosExtraidos.pro_direccion,
+        datosExtraidos.pro_resumen_ejecutivo,
       )
       .run()
     
+    registrarEvento(tracking, 'db-insert-ok', 'INFO', 'Proyecto insertado en BD', {
+      proyecto_id: insertResult.meta.last_row_id,
+    })
+
     const proyectoId = insertResult.meta.last_row_id
 
     // Generar y actualizar CII
+    registrarEvento(tracking, 'generar-cii', 'INFO', 'Generando CII')
     const cii = generateCII(proyectoId)
     await db
       .prepare('UPDATE PAI_PRO_proyectos SET PRO_cii = ?, PRO_ijson = ? WHERE PRO_id = ?')
       .bind(cii, ijson, proyectoId)
       .run()
+    
+    registrarEvento(tracking, 'cii-generado', 'INFO', 'CII generado y guardado', {
+      cii,
+    })
 
     // Registrar eventos de pipeline
+    registrarEvento(tracking, 'pipeline-eventos', 'INFO', 'Registrando eventos en pipeline')
     await insertPipelineEvent(db, {
       entityId: `proyecto-${proyectoId}`,
       paso: 'crear_proyecto',
       nivel: 'INFO',
       tipoEvento: 'PROCESS_START',
-      detalle: 'Iniciando creación de proyecto',
+      detalle: 'Iniciando creación de proyecto con IA',
     })
-    
+
     await insertPipelineEvent(db, {
       entityId: `proyecto-${proyectoId}`,
       paso: 'validar_ijson',
@@ -147,31 +212,61 @@ export async function handleCrearProyecto(c: AppContext): Promise<Response> {
       tipoEvento: 'STEP_SUCCESS',
       detalle: 'IJSON validado correctamente',
     })
-    
+
+    await insertPipelineEvent(db, {
+      entityId: `proyecto-${proyectoId}`,
+      paso: 'extraer_datos_ia',
+      nivel: 'INFO',
+      tipoEvento: 'STEP_SUCCESS',
+      detalle: 'Datos extraídos con IA: ' + datosExtraidos.pro_titulo,
+    })
+
     await insertPipelineEvent(db, {
       entityId: `proyecto-${proyectoId}`,
       paso: 'crear_proyecto',
       nivel: 'INFO',
       tipoEvento: 'PROCESS_COMPLETE',
-      detalle: 'Proyecto creado exitosamente',
+      detalle: 'Proyecto creado exitosamente con IA',
     })
     
-    const estadoNombre = await getVALNombre(db, estadoId)
+    registrarEvento(tracking, 'pipeline-ok', 'INFO', 'Eventos de pipeline registrados')
+
+    // Generar y guardar log.json
+    registrarEvento(tracking, 'generar-log', 'INFO', 'Generando log.json')
+    completarTracking(tracking)
+    const logJson = await generarLogJSON(c.env, tracking, cii)
     
+    registrarEvento(tracking, 'handler-completado', 'INFO', 'Handler completado exitosamente', {
+      cii,
+      log_saved: true,
+    })
+
+    const estadoNombre = await getVALNombre(db, estadoId)
+
     return c.json({
       proyecto: {
         id: proyectoId,
         cii,
-        titulo: ijsonParsed.titulo_anuncio as string,
+        titulo: datosExtraidos.pro_titulo,
         estado_id: estadoId,
         estado: estadoNombre || 'Desconocido',
         fecha_alta: new Date().toISOString(),
         fecha_ultima_actualizacion: new Date().toISOString(),
       },
+      tracking_id: trackingId,
+      log_url: `analisis-inmuebles/${cii}/${cii}_log.json`,
     }, 201)
   } catch (error) {
+    registrarError(tracking, 'handler-error', error)
+    completarTracking(tracking)
+    const logJson = await generarLogJSON(c.env, tracking)
+    
     console.error('Error al crear proyecto:', error)
-    return c.json({ error: 'Error interno del servidor' }, 500)
+    return c.json({ 
+      error: 'Error interno del servidor',
+      tracking_id: trackingId,
+      log: JSON.parse(logJson),
+    }, 500)
   }
 }
 
