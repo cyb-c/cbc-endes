@@ -187,9 +187,19 @@ class PaiApiClient {
   /**
    * Obtener historial de ejecuciones de un proyecto
    * GET /api/pai/proyectos/:id/pipeline
+   * P1.3 Mejora: Método para obtener pipeline y verificar editabilidad de notas
    */
   async obtenerHistorial(id: number): Promise<ApiResponse<ObtenerHistorialResponse>> {
     return this.get<ObtenerHistorialResponse>(`/api/pai/proyectos/${id}/pipeline`);
+  }
+
+  /**
+   * Obtener eventos de cambio de estado de un proyecto
+   * GET /api/pai/proyectos/:id/pipeline?tipo=cambio_estado
+   * P1.3 Mejora: Método específico para verificar editabilidad de notas
+   */
+  async obtenerCambiosEstado(id: number): Promise<ApiResponse<ObtenerHistorialResponse>> {
+    return this.get<ObtenerHistorialResponse>(`/api/pai/proyectos/${id}/pipeline?tipo=cambio_estado`);
   }
 
   // ==========================================================================

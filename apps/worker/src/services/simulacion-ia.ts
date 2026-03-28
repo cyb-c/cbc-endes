@@ -28,6 +28,77 @@ import type {
 
 const ANALYSIS_TIMEOUT_MS = 30000 // 30 segundos máximo para análisis
 const MAX_RETRIES = 3
+const RETRY_BASE_DELAY_MS = 1000 // 1 segundo base para reintentos
+
+// ============================================================================
+// Funciones de Utilidad - Timeout y Retry (P2.1, P2.2)
+// ============================================================================
+
+/**
+ * Crea una promesa que rechaza después de un timeout
+ * P2.1 Mejora: Timeout de análisis
+ */
+function createTimeout(ms: number, contexto: string): Promise<never> {
+  return new Promise((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`Timeout después de ${ms}ms: ${contexto}`))
+    }, ms)
+  })
+}
+
+/**
+ * Ejecuta una operación con reintentos y backoff exponencial
+ * P2.2 Mejora: Reintentos con backoff exponencial
+ * 
+ * @param operacion - Función asíncrona a ejecutar
+ * @param maxReintentos - Número máximo de reintentos
+ * @param baseDelay - Delay base en ms para backoff exponencial
+ * @returns Resultado de la operación
+ */
+async function ejecutarConReintento<T>(
+  operacion: () => Promise<T>,
+  maxReintentos: number = MAX_RETRIES,
+  baseDelay: number = RETRY_BASE_DELAY_MS,
+): Promise<T> {
+  let ultimoError: Error | null = null
+
+  for (let intento = 1; intento <= maxReintentos; intento++) {
+    try {
+      return await operacion()
+    } catch (error) {
+      ultimoError = error as Error
+      
+      if (intento < maxReintentos) {
+        // Backoff exponencial: 1s, 2s, 4s, 8s...
+        const delay = baseDelay * Math.pow(2, intento - 1)
+        console.warn(`Reintento ${intento}/${maxReintentos} después de ${delay}ms. Error: ${(error as Error).message}`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+  }
+
+  throw ultimoError
+}
+
+/**
+ * Ejecuta una operación con timeout
+ * P2.1 Mejora: Timeout de análisis
+ * 
+ * @param operacion - Función asíncrona a ejecutar
+ * @param timeoutMs - Timeout en milisegundos
+ * @param contexto - Descripción del contexto para el error
+ * @returns Resultado de la operación
+ */
+async function ejecutarConTimeout<T>(
+  operacion: () => Promise<T>,
+  timeoutMs: number,
+  contexto: string,
+): Promise<T> {
+  return Promise.race([
+    operacion(),
+    createTimeout(timeoutMs, contexto),
+  ])
+}
 
 // ============================================================================
 // Mapeo de tipos de artefactos
@@ -93,22 +164,57 @@ type ErrorCodigo =
 
 /**
  * Valida el IJSON recibido
+ * P1.2 Mejora: Validar campos adicionales requeridos para análisis
  */
 function validarIJSON(ijson: string): IJSONValidacion {
   try {
     const parsed = JSON.parse(ijson)
-    
+
+    // Campos obligatorios básicos
+    const camposObligatorios = [
+      'titulo_anuncio',
+      'tipo_inmueble',
+      'precio',
+    ]
+
+    // Campos recomendados para análisis completo
+    const camposRecomendados = [
+      'superficie_construida_m2',
+      'ciudad',
+      'operacion',
+    ]
+
     // Validar campos obligatorios
-    if (!parsed.titulo_anuncio) {
-      return { valido: false, error: 'Falta campo titulo_anuncio' }
+    for (const campo of camposObligatorios) {
+      if (!parsed[campo]) {
+        return { valido: false, error: `Falta campo obligatorio: ${campo}` }
+      }
     }
-    if (!parsed.tipo_inmueble) {
-      return { valido: false, error: 'Falta campo tipo_inmueble' }
+
+    // Validar campos recomendados (warning si faltan)
+    const camposFaltantes: string[] = []
+    for (const campo of camposRecomendados) {
+      if (!parsed[campo]) {
+        camposFaltantes.push(campo)
+      }
     }
-    if (!parsed.precio) {
-      return { valido: false, error: 'Falta campo precio' }
+
+    // Si faltan campos recomendados, continuar pero con warning
+    if (camposFaltantes.length > 0) {
+      // Nota: No bloqueamos, pero se podría registrar un warning en pipeline
+      console.warn(`Campos recomendados faltantes: ${camposFaltantes.join(', ')}`)
     }
-    
+
+    // Validar que precio sea un string válido
+    if (typeof parsed.precio !== 'string') {
+      return { valido: false, error: 'El campo precio debe ser un string' }
+    }
+
+    // Validar que superficie_construida_m2 sea un string si existe
+    if (parsed.superficie_construida_m2 && typeof parsed.superficie_construida_m2 !== 'string') {
+      return { valido: false, error: 'El campo superficie_construida_m2 debe ser un string' }
+    }
+
     return { valido: true, ijson: parsed }
   } catch (error) {
     return { valido: false, error: 'JSON inválido' }
@@ -220,6 +326,7 @@ async function obtenerNotasAnalisisAnterior(
 /**
  * Ejecuta el análisis completo de un proyecto PAI
  * Genera los 10 archivos Markdown en R2
+ * P2.1, P2.2 Mejora: Timeout y reintentos con backoff exponencial
  *
  * @param env - Environment bindings
  * @param db - D1 database instance
@@ -235,159 +342,173 @@ export async function ejecutarAnalisisCompleto(
 ): Promise<AnalisisResultado> {
   const entityId = `proyecto-${proyectoId}`
   const r2Bucket = getR2Bucket(env)
-  
+
   try {
-    // 1. Registrar inicio del proceso
-    await insertPipelineEvent(db, {
-      entityId,
-      paso: 'ejecutar_analisis',
-      nivel: 'INFO',
-      tipoEvento: 'PROCESS_START',
-      detalle: 'Iniciando análisis completo',
-    })
-    
-    // 2. Validar IJSON
-    const ijsonValidado = validarIJSON(ijson)
-    
-    if (!ijsonValidado.valido) {
-      await insertPipelineEvent(db, {
-        entityId,
-        paso: 'validar_ijson',
-        nivel: 'ERROR',
-        tipoEvento: 'STEP_FAILED',
-        errorCodigo: 'INVALID_IJSON',
-        detalle: ijsonValidado.error,
-      })
-      
-      return {
-        exito: false,
-        error_codigo: 'INVALID_IJSON',
-        error_mensaje: ijsonValidado.error,
-      }
-    }
-    
-    await insertPipelineEvent(db, {
-      entityId,
-      paso: 'validar_ijson',
-      nivel: 'INFO',
-      tipoEvento: 'STEP_SUCCESS',
-      detalle: 'IJSON validado correctamente',
-    })
-    
-    // 3. Generar CII
-    const cii = generateCII(proyectoId)
-    
-    // 4. Guardar IJSON en R2
-    await saveIJSON(r2Bucket, cii, ijson)
-    
-    await insertPipelineEvent(db, {
-      entityId,
-      paso: 'guardar_ijson',
-      nivel: 'INFO',
-      tipoEvento: 'STEP_SUCCESS',
-      detalle: 'IJSON guardado en R2',
-    })
-    
-    // 5. Generar contenido de análisis
-    const ijsonParsed = ijsonValidado.ijson as Record<string, unknown>
-    const markdownContents = generateSimulatedAnalysisContent(cii, ijsonParsed)
-    
-    // 6. Guardar cada Markdown en R2
-    const resultados = await saveAllMarkdownArtifacts(r2Bucket, cii, markdownContents)
-    
-    await insertPipelineEvent(db, {
-      entityId,
-      paso: 'generar_markdowns',
-      nivel: 'INFO',
-      tipoEvento: 'STEP_SUCCESS',
-      detalle: 'Markdowns generados exitosamente',
-    })
-    
-    // 7. Insertar registros de artefactos en DB
-    for (const resultado of resultados) {
-      const tipo = extractTipoFromKey(resultado.key)
-      const valCodigo = mapTipoToVALCodigo(tipo)
-      const valId = await getVALIdForCodigo(db, valCodigo)
-      
-      if (!valId) {
-        throw new Error(`No se encontró VAL_id para VAL_codigo: ${valCodigo}`)
-      }
-      
-      await db
-        .prepare(`
-          INSERT INTO PAI_ART_artefactos (ART_proyecto_id, ART_tipo_val_id, ART_ruta, ART_fecha_generacion)
-          VALUES (?, ?, ?, ?)
-        `)
-        .bind(
-          proyectoId,
-          valId,
-          resultado.key,
-          new Date().toISOString(),
-        )
-        .run()
-    }
-    
-    await insertPipelineEvent(db, {
-      entityId,
-      paso: 'registrar_artefactos',
-      nivel: 'INFO',
-      tipoEvento: 'STEP_SUCCESS',
-      detalle: 'Artefactos registrados en base de datos',
-    })
-    
-    // 8. Actualizar estado a PENDIENTE_REVISION
-    await db
-      .prepare(`
-        UPDATE PAI_PRO_proyectos
-        SET estado_id = ?, fecha_ultima_actualizacion = ?
-        WHERE id = ?
-      `)
-      .bind(3, new Date().toISOString(), proyectoId)
-      .run()
-    
-    await insertPipelineEvent(db, {
-      entityId,
-      paso: 'actualizar_estado',
-      nivel: 'INFO',
-      tipoEvento: 'STEP_SUCCESS',
-      detalle: 'Estado actualizado a PENDIENTE_REVISION',
-    })
-    
-    // 9. Finalizar proceso
-    await insertPipelineEvent(db, {
-      entityId,
-      paso: 'ejecutar_analisis',
-      nivel: 'INFO',
-      tipoEvento: 'PROCESS_COMPLETE',
-      detalle: 'Análisis completado exitosamente',
-    })
-    
-    return {
-      exito: true,
-      artefactos_generados: resultados.map(r => {
-        const tipo = extractTipoFromKey(r.key)
-        const valCodigo = mapTipoToVALCodigo(tipo)
-        return {
-          id: 0, // Será asignado por la DB
-          proyecto_id: proyectoId,
-          tipo_artefacto_id: 0, // Se llenará después de consultar la DB
-          tipo: valCodigo,
-          ruta_r2: r.key,
-          fecha_creacion: new Date().toISOString(),
+    // P2.1, P2.2: Ejecutar análisis con timeout y reintentos
+    return await ejecutarConReintento(async () => {
+      return await ejecutarConTimeout(async () => {
+        // 1. Registrar inicio del proceso
+        await insertPipelineEvent(db, {
+          entityId,
+          paso: 'ejecutar_analisis',
+          nivel: 'INFO',
+          tipoEvento: 'PROCESS_START',
+          detalle: 'Iniciando análisis completo',
+        })
+
+        // 2. Validar IJSON
+        const ijsonValidado = validarIJSON(ijson)
+
+        if (!ijsonValidado.valido) {
+          await insertPipelineEvent(db, {
+            entityId,
+            paso: 'validar_ijson',
+            nivel: 'ERROR',
+            tipoEvento: 'STEP_FAILED',
+            errorCodigo: 'INVALID_IJSON',
+            detalle: ijsonValidado.error,
+          })
+
+          return {
+            exito: false,
+            error_codigo: 'INVALID_IJSON',
+            error_mensaje: ijsonValidado.error,
+          }
         }
-      }),
-    }
+
+        await insertPipelineEvent(db, {
+          entityId,
+          paso: 'validar_ijson',
+          nivel: 'INFO',
+          tipoEvento: 'STEP_SUCCESS',
+          detalle: 'IJSON validado correctamente',
+        })
+
+        // 3. Generar CII
+        const cii = generateCII(proyectoId)
+
+        // 4. Guardar IJSON en R2
+        await saveIJSON(r2Bucket, cii, ijson)
+
+        await insertPipelineEvent(db, {
+          entityId,
+          paso: 'guardar_ijson',
+          nivel: 'INFO',
+          tipoEvento: 'STEP_SUCCESS',
+          detalle: 'IJSON guardado en R2',
+        })
+
+        // 5. Generar contenido de análisis
+        const ijsonParsed = ijsonValidado.ijson as Record<string, unknown>
+        const markdownContents = generateSimulatedAnalysisContent(cii, ijsonParsed)
+
+        // 6. Guardar cada Markdown en R2
+        const resultados = await saveAllMarkdownArtifacts(r2Bucket, cii, markdownContents)
+
+        await insertPipelineEvent(db, {
+          entityId,
+          paso: 'generar_markdowns',
+          nivel: 'INFO',
+          tipoEvento: 'STEP_SUCCESS',
+          detalle: 'Markdowns generados exitosamente',
+        })
+
+        // 7. Insertar registros de artefactos en DB
+        for (const resultado of resultados) {
+          const tipo = extractTipoFromKey(resultado.key)
+          const valCodigo = mapTipoToVALCodigo(tipo)
+          const valId = await getVALIdForCodigo(db, valCodigo)
+
+          if (!valId) {
+            throw new Error(`No se encontró VAL_id para VAL_codigo: ${valCodigo}`)
+          }
+
+          await db
+            .prepare(`
+              INSERT INTO PAI_ART_artefactos (ART_proyecto_id, ART_tipo_val_id, ART_ruta, ART_fecha_generacion)
+              VALUES (?, ?, ?, ?)
+            `)
+            .bind(
+              proyectoId,
+              valId,
+              resultado.key,
+              new Date().toISOString(),
+            )
+            .run()
+        }
+
+        await insertPipelineEvent(db, {
+          entityId,
+          paso: 'registrar_artefactos',
+          nivel: 'INFO',
+          tipoEvento: 'STEP_SUCCESS',
+          detalle: 'Artefactos registrados en base de datos',
+        })
+
+        // 8. Actualizar estado a PENDIENTE_REVISION
+        await db
+          .prepare(`
+            UPDATE PAI_PRO_proyectos
+            SET estado_id = ?, fecha_ultima_actualizacion = ?
+            WHERE id = ?
+          `)
+          .bind(3, new Date().toISOString(), proyectoId)
+          .run()
+
+        await insertPipelineEvent(db, {
+          entityId,
+          paso: 'actualizar_estado',
+          nivel: 'INFO',
+          tipoEvento: 'STEP_SUCCESS',
+          detalle: 'Estado actualizado a PENDIENTE_REVISION',
+        })
+
+        // 9. Finalizar proceso
+        await insertPipelineEvent(db, {
+          entityId,
+          paso: 'ejecutar_analisis',
+          nivel: 'INFO',
+          tipoEvento: 'PROCESS_COMPLETE',
+          detalle: 'Análisis completado exitosamente',
+        })
+
+        return {
+          exito: true,
+          artefactos_generados: resultados.map(r => {
+            const tipo = extractTipoFromKey(r.key)
+            const valCodigo = mapTipoToVALCodigo(tipo)
+            return {
+              id: 0, // Será asignado por la DB
+              proyecto_id: proyectoId,
+              tipo_artefacto_id: 0, // Se llenará después de consultar la DB
+              tipo: valCodigo,
+              ruta_r2: r.key,
+              fecha_creacion: new Date().toISOString(),
+            }
+          }),
+        }
+      }, ANALYSIS_TIMEOUT_MS, 'ejecutarAnalisisCompleto')
+    }, MAX_RETRIES, RETRY_BASE_DELAY_MS)
   } catch (error) {
+    // Registrar error (timeout o error después de reintentos)
     await insertPipelineEvent(db, {
       entityId,
       paso: 'ejecutar_analisis',
       nivel: 'ERROR',
       tipoEvento: 'PROCESS_FAILED',
-      errorCodigo: 'ERROR_ANALISIS_INESPERADO',
+      errorCodigo: error instanceof Error && error.message.includes('Timeout') 
+        ? 'ANALYSIS_TIMEOUT' 
+        : 'ERROR_ANALISIS_INESPERADO',
       detalle: error instanceof Error ? error.message : 'Error desconocido',
     })
-    
-    throw error
+
+    return {
+      exito: false,
+      error_codigo: error instanceof Error && error.message.includes('Timeout')
+        ? 'ANALYSIS_TIMEOUT'
+        : 'ERROR_ANALISIS_INESPERADO',
+      error_mensaje: error instanceof Error ? error.message : 'Error desconocido',
+    }
   }
 }
 

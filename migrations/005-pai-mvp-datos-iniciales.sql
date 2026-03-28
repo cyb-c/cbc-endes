@@ -378,7 +378,7 @@ SELECT
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'TIPO_NOTA';
 
 INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
-SELECT 
+SELECT
   ATR_id,
   'APRENDE_IA',
   'Corrección IA',
@@ -386,6 +386,20 @@ SELECT
   4,
   1,
   0,
+  datetime('now'),
+  datetime('now')
+FROM PAI_ATR_atributos WHERE ATR_codigo = 'TIPO_NOTA';
+
+-- Valor ACTIVO para TIPO_NOTA (requerido para crear notas - P0.1 Corrección Crítica)
+INSERT INTO PAI_VAL_valores (VAL_atr_id, VAL_codigo, VAL_nombre, VAL_descripcion, VAL_orden, VAL_activo, VAL_es_default, VAL_fecha_alta, VAL_fecha_actualizacion)
+SELECT
+  ATR_id,
+  'ACTIVO',
+  'activo',
+  'Nota activa, puede editarse',
+  5,
+  1,
+  1,
   datetime('now'),
   datetime('now')
 FROM PAI_ATR_atributos WHERE ATR_codigo = 'TIPO_NOTA';

@@ -92,41 +92,27 @@ export async function handleCrearNota(c: AppContext): Promise<Response> {
       .prepare('SELECT PRO_id FROM PAI_PRO_proyectos WHERE PRO_id = ?')
       .bind(proyectoId)
       .first()
-    
+
     if (!proyecto) {
       return c.json({ error: 'Proyecto no encontrado' }, 404)
     }
-    
-    // Obtener estado de nota ACTIVO (primer estado)
-    const estadoResult = await db
-      .prepare(`
-        SELECT v.VAL_id
-        FROM PAI_VAL_valores v
-        JOIN PAI_ATR_atributos a ON v.VAL_atr_id = a.ATR_id
-        WHERE a.ATR_codigo = 'ESTADO_NOTA' AND v.VAL_codigo = 'ACTIVO'
-      `)
-      .first()
-    
-    if (!estadoResult) {
-      return c.json({ error: 'Estado ACTIVO de nota no encontrado' }, 500)
-    }
-    
-    const estadoId = estadoResult.VAL_id as number
-    
-    // Insertar nota
+
+    // P0.3 Corrección Crítica: Eliminar referencia a ESTADO_NOTA (atributo inexistente)
+    // La tabla PAI_NOT_notas no requiere estado_val_id según diagnóstico FASE 2
+
+    // Insertar nota (sin estado_val_id)
     const insertResult = await db
       .prepare(`
         INSERT INTO PAI_NOT_notas (
           NOT_proyecto_id, NOT_tipo_val_id, NOT_asunto, NOT_nota,
-          NOT_estado_val_id, NOT_editable, NOT_usuario_alta
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          NOT_editable, NOT_usuario_alta
+        ) VALUES (?, ?, ?, ?, ?, ?)
       `)
       .bind(
         proyectoId,
         tipo_nota_id,
         autor, // Usamos el autor como asunto por ahora
         contenido,
-        estadoId,
         1, // editable
         autor,
       )

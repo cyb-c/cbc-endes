@@ -14,7 +14,7 @@ const LayoutContent: React.FC = () => {
   return (
     <div className="min-h-screen xl:flex">
       <div>
-        {USE_DYNAMIC_MENU ? <AppSidebarDynamic isExpanded={isExpanded} /> : <AppSidebar />}
+        {USE_DYNAMIC_MENU ? <AppSidebarDynamic /> : <AppSidebar />}
         <Backdrop />
       </div>
       <div

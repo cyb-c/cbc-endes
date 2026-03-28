@@ -5,12 +5,12 @@ compatibility_date = "2026-03-26"
 [vars]
 VITE_API_BASE_URL = "http://localhost:8787"
 VITE_ENVIRONMENT = "dev"
-VITE_USE_DYNAMIC_MENU = "false"
+VITE_USE_DYNAMIC_MENU = "true"
 
 [env.preview]
 name = "pg-cbc-endes-preview"
-vars = { VITE_API_BASE_URL = "http://localhost:8787", VITE_ENVIRONMENT = "preview", VITE_USE_DYNAMIC_MENU = "false" }
+vars = { VITE_API_BASE_URL = "http://localhost:8787", VITE_ENVIRONMENT = "preview", VITE_USE_DYNAMIC_MENU = "true" }
 
 [env.production]
 name = "pg-cbc-endes"
-vars = { VITE_API_BASE_URL = "https://worker-cbc-endes-dev.workers.dev", VITE_ENVIRONMENT = "production", VITE_USE_DYNAMIC_MENU = "false" }
+vars = { VITE_API_BASE_URL = "https://wk-backend-dev.cbconsulting.workers.dev", VITE_ENVIRONMENT = "production", VITE_USE_DYNAMIC_MENU = "true" }

@@ -24,8 +24,14 @@ type AppBindings = {
 const app = new Hono<{ Bindings: AppBindings }>();
 
 // CORS middleware
+// Actualizado: 2026-03-28 - Fase P1 Corrección CORS
 app.use('/api/*', cors({
-  origin: ['http://localhost:5173', 'https://pg-cbc-endes.pages.dev'],
+  origin: [
+    'http://localhost:5173',
+    'https://pg-cbc-endes.pages.dev',
+    'https://56dcde34.pg-cbc-endes.pages.dev',
+    'https://388b71e5.pg-cbc-endes.pages.dev'
+  ],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
   credentials: true,

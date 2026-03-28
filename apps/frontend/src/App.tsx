@@ -18,6 +18,9 @@ import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
+// Rutas de Proyectos PAI - Agregado Fase P0 2026-03-28
+import { ListarProyectos } from "./pages/proyectos/ListarProyectos";
+import { DetalleProyecto } from "./pages/proyectos/DetalleProyecto";
 
 export default function App() {
   return (
@@ -28,6 +31,10 @@ export default function App() {
           {/* Dashboard Layout */}
           <Route element={<AppLayout />}>
             <Route index path="/" element={<Home />} />
+
+            {/* Rutas de Proyectos PAI - Agregado Fase P0 2026-03-28 */}
+            <Route path="/proyectos" element={<ListarProyectos />} />
+            <Route path="/proyectos/:id" element={<DetalleProyecto />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />

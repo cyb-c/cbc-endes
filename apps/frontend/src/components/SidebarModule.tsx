@@ -1,12 +1,16 @@
 /**
  * SidebarModule Component
- * 
+ *
  * Renders a menu module with its functions, handles expand/collapse
  * Following R5: Idioma y estilo - Código en inglés, documentación en español
+ * 
+ * Actualizado: 2026-03-28 - Fase P2: Unificación de styling con AppSidebar
  */
 
 import { useState } from 'react';
 import { SidebarItem } from './SidebarItem';
+import { useSidebar } from '../context/SidebarContext';
+import { ChevronDownIcon } from '../icons';
 
 interface SidebarModuleProps {
   module: {
@@ -24,58 +28,61 @@ interface SidebarModuleProps {
     }>;
   };
   label: string;
-  isExpanded: boolean;
 }
 
 export const SidebarModule: React.FC<SidebarModuleProps> = ({
   module,
   label,
-  isExpanded,
 }) => {
+  const { isExpanded, isHovered, isMobileOpen } = useSidebar();
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="mb-2">
+    <li className="mb-2">
       {/* Module button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 rounded-lg transition-colors"
+        className={`menu-item group ${
+          isOpen ? "menu-item-active" : "menu-item-inactive"
+        } cursor-pointer ${
+          !isExpanded && !isHovered
+            ? "lg:justify-center"
+            : "lg:justify-start"
+        }`}
       >
-        <div className="flex items-center gap-3">
+        <span
+          className={`menu-item-icon-size ${
+            isOpen ? "menu-item-icon-active" : "menu-item-icon-inactive"
+          }`}
+        >
           {/* Icon - using emoji for now */}
           <span className="text-lg">{module.icono}</span>
-          {isExpanded && <span>{label}</span>}
-        </div>
-        {isExpanded && (
-          <svg
-            className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M6 9l6 6 6-6" />
-          </svg>
+        </span>
+        {(isExpanded || isHovered || isMobileOpen) && (
+          <span className="menu-item-text">{label}</span>
+        )}
+        {(isExpanded || isHovered || isMobileOpen) && (
+          <ChevronDownIcon
+            className={`ml-auto w-5 h-5 transition-transform ${
+              isOpen ? "rotate-180 text-brand-500" : ""
+            }`}
+          />
         )}
       </button>
 
       {/* Module functions */}
-      {isOpen && (
-        <div className="ml-4 mt-1 space-y-1">
-          {module.funciones.map((funcion) => (
-            <SidebarItem
-              key={funcion.id}
-              funcion={funcion}
-              label={label}
-              isExpanded={isExpanded}
-            />
-          ))}
+      {isOpen && (isExpanded || isHovered || isMobileOpen) && (
+        <div className="overflow-hidden transition-all duration-300">
+          <ul className="mt-2 space-y-1 ml-9">
+            {module.funciones.map((funcion) => (
+              <SidebarItem
+                key={funcion.id}
+                funcion={funcion}
+              />
+            ))}
+          </ul>
         </div>
       )}
-    </div>
+    </li>
   );
 };

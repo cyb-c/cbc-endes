@@ -3,16 +3,15 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useObtenerProyecto, useEjecutarAnalisis, useEliminarProyecto } from '../../hooks/use-pai';
 import { ESTADO_PROYECTO_LABELS, ESTADO_PROYECTO_COLORS, type ProyectoPAI } from '../../types/pai';
 import { ListaNotas } from '../../components/pai/ListaNotas';
 import { ModalCambioEstado } from '../../components/pai/ModalCambioEstado';
+import { ResultadosAnalisis } from '../../components/pai/ResultadosAnalisis';
 
-interface DetalleProyectoProps {
-  id: string;
-}
-
-export function DetalleProyecto({ id }: DetalleProyectoProps) {
+export function DetalleProyecto() {
+  const { id } = useParams<{ id: string }>();
   const [proyecto, setProyecto] = useState<ProyectoPAI | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, _setError] = useState<string | null>(null);
@@ -28,6 +27,7 @@ export function DetalleProyecto({ id }: DetalleProyectoProps) {
   }, [id]);
 
   const cargarProyecto = async () => {
+    if (!id) return;
     const data = await obtenerProyecto(parseInt(id));
     if (data) {
       setProyecto(data);
@@ -159,49 +159,10 @@ export function DetalleProyecto({ id }: DetalleProyectoProps) {
       </div>
 
       {/* Resultados del análisis */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-xl font-bold mb-4">Resultados del Análisis</h2>
-        
-        {/* Pestañas */}
-        <div className="border-b">
-          <nav className="-mb-px flex space-x-8">
-            {['resumen', 'datos', 'fisico', 'estrategico', 'financiero', 'regulatorio', 'inversor', 'operador', 'propietario'].map((pestaña) => (
-              <button
-                key={pestaña}
-                onClick={() => setPestañaActiva(pestaña)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  pestañaActiva === pestaña
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {pestaña.charAt(0).toUpperCase() + pestaña.slice(1)}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Contenido de la pestaña activa */}
-        <div className="mt-4">
-          {pestañaActiva === 'resumen' && (
-            <div className="prose max-w-none">
-              <h3 className="text-lg font-medium mb-2">Resumen Ejecutivo</h3>
-              <p className="text-gray-700">
-                {proyecto.artefactos?.find(a => a.tipo === 'resumen_ejecutivo')?.ruta_r2 ? (
-                  <em>El resumen ejecutivo se generó correctamente. Ver archivo en R2.</em>
-                ) : (
-                  <em>No se ha ejecutado el análisis aún.</em>
-                )}
-              </p>
-            </div>
-          )}
-          {pestañaActiva !== 'resumen' && (
-            <div className="text-center py-8 text-gray-500">
-              Contenido de {pestañaActiva.charAt(0).toUpperCase() + pestañaActiva.slice(1)}
-            </div>
-          )}
-        </div>
-      </div>
+      <ResultadosAnalisis
+        proyectoId={proyecto.id}
+        artefactos={proyecto.artefactos || []}
+      />
 
       {/* Notas */}
       <ListaNotas

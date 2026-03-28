@@ -101,14 +101,17 @@
 | `db-cbconsulting` | `db_binding_01` | `wk-backend` | `fafcd5e2-b960-49f7-8502-88a0f8ba5052` | ✅ | Menú dinámico v1 + PAI (tablas PAI_PRO_proyectos, PAI_VAL_valores modificadas en FASE 4) |
 | `cbc-endes-db-test` | DB | worker-cbc-endes | `22892bef-3878-4ef0-bd7d-d28bc9656914` | ❌ Eliminada | Recurso de prueba eliminado |
 
-**Nota:** La D1 Database `db-cbconsulting` está activa y contiene las tablas del menú dinámico y PAI. Cambios en FASE 4:
-- Tabla `PAI_PRO_proyectos`: Agregada columna `PRO_fecha_ultima_actualizacion`
+**Nota:** La D1 Database `db-cbconsulting` está activa y contiene las tablas del menú dinámico y PAI.
+
+**Cambios en FASE 2 y FASE 3 (2026-03-28):**
+- Tabla `PAI_PRO_proyectos`: Agregada columna `PRO_ijson` (migración 009)
+- Tabla `PAI_PRO_proyectos`: Columna `PRO_fecha_ultima_actualizacion` existente
+- Tabla `PAI_VAL_valores`: Agregado valor `ACTIVO` para `TIPO_NOTA` (migración 005 modificada)
 - Tabla `PAI_VAL_valores`: Agregado valor `RESUMEN_EJECUTIVO` (VAL_id: 38, VAL_atr_id: 5)
+- Tabla `PAI_NOT_notas`: Columna `NOT_estado_val_id` ahora es nullable (migración 010)
 
 **Problemas conocidos:**
-- Falta columna `PRO_ijson` en `PAI_PRO_proyectos` (requerida para análisis)
-- Falta valor `ACTIVO` para `TIPO_NOTA` (requerido para crear notas)
-- Migración `005-pai-mvp-datos-iniciales.sql` falló con error de UNIQUE constraint
+- ⚠️ Migración `005-pai-mvp-datos-iniciales.sql` puede requerir re-ejecución en producción
 
 ### 4.4 Buckets R2
 
@@ -244,6 +247,7 @@
 | Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id/estado` | PUT | `{ estado_id: number, ... }` | `{ proyecto: {...} }` | ✅ |
 | Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id` | DELETE | Ninguno | `{ mensaje: "...", proyecto_eliminado: {...} }` | ✅ |
 | Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id/pipeline` | GET | Query params (limite) | `{ eventos: [...] }` | ✅ |
+| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id/pipeline` | GET | `?tipo=cambio_estado` | `{ eventos: [...] }` | ✅ (FASE 3 P1.3) |
 | Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id/notas` | POST | `{ tipo_nota_id, autor, contenido }` | `{ nota: {...} }` | ✅ |
 | Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id/notas/:notaId` | PUT | `{ contenido: string }` | `{ nota: {...} }` | ✅ |
 
@@ -321,10 +325,12 @@ wrangler d1 migrations list db-cbconsulting
 - `002-menu-dinamico-v1.sql` - Crea tabla `MOD_modulos_config` para menú dinámico
 - `003-pipeline-events.sql` - Crea tabla `pipeline_eventos` para tracking de eventos del pipeline
 - `004-pai-mvp.sql` - Crea tablas PAI (PAI_ATR_atributos, PAI_VAL_valores, PAI_PRO_proyectos, PAI_NOT_notas, PAI_ART_artefactos) para gestión de proyectos de análisis inmobiliarios
-- `005-pai-mvp-datos-iniciales.sql` - Datos iniciales para tablas PAI (37 registros en PAI_VAL_valores) ⚠️ FALLÓ (UNIQUE constraint)
+- `005-pai-mvp-datos-iniciales.sql` - Datos iniciales para tablas PAI (37 registros en PAI_VAL_valores) ⚠️ Requiere re-ejecución en producción
 - `006-pai-modulo-menu-proyectos.sql` - Agrega módulo "Proyectos" al menú dinámico
 - `007-pai-agregar-columna-fecha-ultima-actualizacion.sql` - Agrega columna `PRO_fecha_ultima_actualizacion` a PAI_PRO_proyectos (FASE 4)
 - `008-pai-agregar-valor-resumen-ejecutivo.sql` - Agrega valor `RESUMEN_EJECUTIVO` a PAI_VAL_valores (FASE 4)
+- `009-pai-agregar-columna-pro-ijson.sql` - Agrega columna `PRO_ijson` a PAI_PRO_proyectos (FASE 2 P0.1)
+- `010-pai-notas-estado-val-id-nullable.sql` - Hace nullable `NOT_estado_val_id` en PAI_NOT_notas (FASE 2 P0.3)
 
 ### 10.4 Gestión de Secrets
 
@@ -351,6 +357,26 @@ wrangler secret put [SECRET_NAME] --env dev
 | `apps/frontend/.env.example` | Plantilla variables frontend | ✅ |
 | `.gitignore` | Exclusiones de versionado | ✅ |
 
+**Archivos de Documentación Backend:**
+
+| Archivo | Finalidad | Estado |
+|---------|-----------|--------|
+| `apps/worker/docs/PAI_ERROR_HANDLING.md` | Estrategia de manejo de errores para endpoints PAI | ✅ (FASE 2 P2.3) |
+
+**Archivos de Componentes Frontend PAI:**
+
+| Archivo | Finalidad | Estado |
+|---------|-----------|--------|
+| `apps/frontend/src/components/pai/ResultadosAnalisis.tsx` | Componente de 9 pestañas de resultados de análisis | ✅ (FASE 3 P0.2) |
+| `apps/frontend/src/components/pai/Paginacion.tsx` | Componente de paginación UI para listados | ✅ (FASE 3 P1.1) |
+| `apps/frontend/src/components/pai/VisualizadorMarkdown.tsx` | Visualizador de contenido Markdown | ✅ (FASE 3 P1.2) |
+
+**Archivos de Hooks Frontend PAI:**
+
+| Archivo | Finalidad | Estado |
+|---------|-----------|--------|
+| `apps/frontend/src/hooks/useNotaEditable.ts` | Hook para verificar editabilidad de notas por pipeline | ✅ (FASE 3 P1.3) |
+
 **Archivos eliminados:**
 - `migrations/001-initial.sql` - Migración D1 eliminada (ya no aplica)
 
@@ -360,17 +386,15 @@ wrangler secret put [SECRET_NAME] --env dev
 
 | Elemento | Tipo | Observaciones | Responsable |
 |----------|------|---------------|-------------|
-| Columna PRO_ijson | Base de Datos | Falta columna en PAI_PRO_proyectos (requerida para análisis) | Pendiente de corrección |
-| Valor ACTIVO para TIPO_NOTA | Base de Datos | No hay valores con VAL_es_default = 1 para TIPO_NOTA (requerido para crear notas) | Pendiente de corrección |
 | Error endpoint cambio de estado | Backend | Endpoint `/api/pai/proyectos/:id/estado` retorna "Error interno del servidor" | Pendiente de investigación |
-| Migración 005 | Base de Datos | Falla con error de UNIQUE constraint en PAI_VAL_valores | Pendiente de corrección |
+| Migración 005 | Base de Datos | Requiere re-ejecución en producción con datos corregidos | Pendiente de corrección |
 | R2 Bucket definitivo | Recurso | Definir nombre y configuración de acceso | Usuario (Fase 2) |
 | Workflows | Recurso | Orquestación de prompts contra IA | Usuario (Fase 2) |
 | Integraciones externas | API | OpenAI, Anthropic u otros proveedores | Usuario (Fase 2) |
 | Autenticación de usuarios | Auth | No requerido para MVP | Usuario (Fase 3) |
 | CI/CD con GitHub Actions | Pipeline | No requerido según usuario | Usuario (opcional) |
 
-> **Nota:** El Worker backend (`wk-backend`) y la D1 Database (`db-cbconsulting`) están desplegados y activos. Los 4 primeros vacíos fueron identificados durante las pruebas E2E de FASE 4.
+> **Nota:** El Worker backend (`wk-backend`) y la D1 Database (`db-cbconsulting`) están desplegados y activos. Los vacíos de columna PRO_ijson y valor ACTIVO para TIPO_NOTA fueron **RESUELTOS** en FASE 2 P0.1.
 
 ---
 
@@ -378,6 +402,7 @@ wrangler secret put [SECRET_NAME] --env dev
 
 | Fecha | Cambio | Responsable | Aprobado Por |
 |-------|--------|-------------|--------------|
+| 2026-03-28 | Actualización v10.0 - FASE 2 P0/P1 y FASE 3 P0/P1 completadas (correcciones críticas e importantes) | inventariador | Pendiente aprobación usuario |
 | 2026-03-28 | Actualización v9.0 - FASE 4: Integración y Pruebas completada (i18n, .env.production, Migraciones 007/008, Despliegue Pages, Pruebas E2E) | inventariador | Pendiente aprobación usuario |
 | 2026-03-27 | Actualización v7.0 - FASE 1 PAI completada: Pipeline Events, Esquema PAI (PRO/ATR/VAL/NOT/ART), R2 Storage | Orchestrator | Aprobado |
 | 2026-03-27 | Despliegue de menú dinámico v1: Worker `wk-backend`, D1 `db-cbconsulting`, binding `db_binding_01`, endpoint `/api/menu` | inventariador | usuario |
@@ -391,26 +416,38 @@ wrangler secret put [SECRET_NAME] --env dev
 
 | Recurso | Nombre | Estado | Notas |
 |---------|--------|--------|-------|
-| Worker | `wk-backend` | ✅ Activo | Backend API para FASE 4 (Integración y Pruebas) - 10 endpoints PAI implementados, Migraciones 007/008 aplicadas |
+| Worker | `wk-backend` | ✅ Activo | Backend API para FASE 2/3 - 10 endpoints PAI implementados, timeout 30s, reintentos con backoff, migraciones 007-010 aplicadas |
 | Worker | `worker-cbc-endes-dev` | ❌ Eliminado | Recurso de prueba temporal |
-| Pages | `pg-cbc-endes` | ✅ Activo | Frontend en producción con i18n (es-ES) y módulo PAI integrado |
-| D1 Database | `db-cbconsulting` | ✅ Activo | Base de datos para menú dinámico y PAI (tablas PAI_PRO_proyectos y PAI_VAL_valores modificadas en FASE 4) |
+| Pages | `pg-cbc-endes` | ✅ Activo | Frontend en producción con i18n (es-ES), módulo PAI integrado, paginación UI, 9 pestañas de análisis, visualizador Markdown |
+| D1 Database | `db-cbconsulting` | ✅ Activo | Base de datos para menú dinámico y PAI (tablas PAI_PRO_proyectos, PAI_VAL_valores, PAI_NOT_notas modificadas en FASE 2/3) |
 | D1 Database | `cbc-endes-db-test` | ❌ Eliminado | Recurso de prueba temporal |
 | R2 Bucket | `r2-cbconsulting` | ✅ Activo | Bucket R2 para almacenamiento de archivos PAI |
 | R2 Bucket | `cbc-endes-storage-test` | ❌ Eliminado | Recurso de prueba temporal |
 
 ---
 
-## 15. Próximos Pasos (Corrección de Problemas Identificados en FASE 4)
+## 15. Próximos Pasos (Corrección de Problemas Identificados)
 
-Los siguientes problemas estructurales fueron identificados durante las pruebas E2E y requieren corrección:
+### Problemas RESUELTOS en FASE 2 P0 y FASE 3 P0/P1:
 
-1. **Agregar columna PRO_ijson a PAI_PRO_proyectos** - La tabla PAI_PRO_proyectos no tiene la columna PRO_ijson. El código espera recuperar el IJSON de esta columna para ejecutar el análisis.
-2. **Agregar valor ACTIVO para TIPO_NOTA** - No hay valores con VAL_es_default = 1 para el atributo TIPO_NOTA. El código busca un valor activo por defecto para crear notas.
-3. **Investigar error en endpoint de cambio de estado** - El endpoint `/api/pai/proyectos/:id/estado` retorna "Error interno del servidor".
-4. **Corregir migración 005** - La migración 005-pai-mvp-datos-iniciales.sql falla con error de UNIQUE constraint en la tabla PAI_VAL_valores.
+| # | Problema | Estado | Solución |
+|---|----------|--------|----------|
+| 1 | Agregar columna PRO_ijson a PAI_PRO_proyectos | ✅ RESUELTO | Migración 009 aplicada |
+| 2 | Agregar valor ACTIVO para TIPO_NOTA | ✅ RESUELTO | Migración 005 modificada |
+| 3 | Paginación UI no implementada | ✅ RESUELTO | Componente Paginacion.tsx (FASE 3 P1.1) |
+| 4 | 9 pestañas de análisis no implementadas | ✅ RESUELTO | Componente ResultadosAnalisis.tsx (FASE 3 P0.2) |
+| 5 | Visualizador Markdown no implementado | ✅ RESUELTO | Componente VisualizadorMarkdown.tsx (FASE 3 P1.2) |
+| 6 | Editabilidad de notas sin validación | ✅ RESUELTO | Hook useNotaEditable.ts (FASE 3 P1.3) |
 
-> **Nota:** El Worker backend (`wk-backend`) y la D1 Database (`db-cbconsulting`) están desplegados y activos con todos los endpoints PAI implementados. El frontend está desplegado en Cloudflare Pages con i18n integrado. Las pruebas E2E mostraron 2/10 casos aprobados (20%).
+### Problemas Pendientes:
+
+| # | Problema | Prioridad | Notas |
+|---|----------|-----------|-------|
+| 1 | Investigar error en endpoint de cambio de estado | 🟠 Alta | Endpoint `/api/pai/proyectos/:id/estado` retorna "Error interno del servidor" |
+| 2 | Re-ejecutar migración 005 en producción | 🟠 Alta | Requiere corrección de datos duplicados |
+| 3 | Carga real de Markdown desde R2 | 🟡 Media | Visualizador implementado, falta cargar contenido real |
+
+> **Nota:** El Worker backend (`wk-backend`) y la D1 Database (`db-cbconsulting`) están desplegados y activos con todos los endpoints PAI implementados. El frontend está desplegado en Cloudflare Pages con todas las correcciones de FASE 2 y FASE 3 aplicadas.
 
 ---
 

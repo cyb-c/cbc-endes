@@ -1,10 +1,12 @@
 /**
  * Página de listado de proyectos PAI
+ * P1.1 Corrección Importante: Implementar paginación UI
  */
 
 import { useState, useEffect } from 'react';
 import { useListarProyectos } from '../../hooks/use-pai';
 import { ESTADO_PROYECTO_LABELS, ESTADO_PROYECTO_COLORS, type ProyectoPAI, type ListarProyectosParams } from '../../types/pai';
+import { Paginacion } from '../../components/pai/Paginacion';
 
 export function ListarProyectos() {
   const [proyectos, setProyectos] = useState<ProyectoPAI[]>([]);
@@ -12,15 +14,18 @@ export function ListarProyectos() {
   const [error, _setError] = useState<string | null>(null);
   const [filtros, setFiltros] = useState<ListarProyectosParams>({});
   const [mostrarCrearModal, setMostrarCrearModal] = useState(false);
+  // P1.1: Estado de paginación
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(20);
 
-  const { listarProyectos } = useListarProyectos();
+  const { listarProyectos, data: paginacionData } = useListarProyectos();
 
   useEffect(() => {
     cargarProyectos();
-  }, []);
+  }, [pagina, porPagina]);
 
   const cargarProyectos = async () => {
-    const data = await listarProyectos(filtros);
+    const data = await listarProyectos({ ...filtros, page: pagina, limit: porPagina });
     if (data) {
       setProyectos(data.proyectos);
     }
@@ -90,12 +95,14 @@ export function ListarProyectos() {
               onChange={(e) => handleFiltroChange('estado', e.target.value)}
             >
               <option value="">Todos los estados</option>
-              <option value="borrador">Borrador</option>
-              <option value="en_proceso">En Proceso</option>
-              <option value="completado">Completado</option>
-              <option value="valorado">Valorado</option>
+              <option value="creado">Creado</option>
+              <option value="procesando_analisis">En Análisis</option>
+              <option value="analisis_con_error">Análisis con Error</option>
+              <option value="analisis_finalizado">Análisis Finalizado</option>
+              <option value="evaluando_viabilidad">Evaluando Viabilidad</option>
+              <option value="evaluando_plan_negocio">Evaluando Plan de Negocio</option>
+              <option value="seguimiento_comercial">Seguimiento Comercial</option>
               <option value="descartado">Descartado</option>
-              <option value="error">Error</option>
             </select>
           </div>
 
@@ -203,6 +210,21 @@ export function ListarProyectos() {
           </div>
         )}
       </div>
+
+      {/* Paginación */}
+      {paginacionData && paginacionData.total_pages > 1 && (
+        <Paginacion
+          paginaActual={pagina}
+          totalPaginas={paginacionData.total_pages}
+          totalResultados={paginacionData.total}
+          porPagina={porPagina}
+          onPageChange={setPagina}
+          onPorPaginaChange={(nuevoPorPagina) => {
+            setPorPagina(nuevoPorPagina);
+            setPagina(1); // Resetear a primera página al cambiar tamaño
+          }}
+        />
+      )}
 
       {/* Modal de creación de proyecto */}
       {mostrarCrearModal && (

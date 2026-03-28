@@ -55,13 +55,21 @@ export interface PipelineEvent {
 // Tipos de Proyecto PAI
 // ============================================================================
 
+/**
+ * Estados de proyecto PAI - Alineados con backend (migración 005-pai-mvp-datos-iniciales.sql)
+ * P0.1 Corrección Crítica: Alinear tipos con valores reales de PAI_VAL_valores
+ */
 export type EstadoProyecto =
-  | 'borrador'
-  | 'en_proceso'
-  | 'completado'
-  | 'valorado'
-  | 'descartado'
-  | 'error';
+  // Estados automáticos
+  | 'creado'
+  | 'procesando_analisis'
+  | 'analisis_con_error'
+  | 'analisis_finalizado'
+  // Estados manuales
+  | 'evaluando_viabilidad'
+  | 'evaluando_plan_negocio'
+  | 'seguimiento_comercial'
+  | 'descartado';
 
 export interface ProyectoPAI {
   id: number;
@@ -184,20 +192,36 @@ export type EstadoProyectoBadgeColor = {
   [K in EstadoProyecto]: string;
 };
 
+/**
+ * Colores para badges de estado - P0.1 Corrección Crítica
+ * Alineados con los nuevos estados del backend
+ */
 export const ESTADO_PROYECTO_COLORS: EstadoProyectoBadgeColor = {
-  borrador: 'bg-gray-100 text-gray-800',
-  en_proceso: 'bg-yellow-100 text-yellow-800',
-  completado: 'bg-green-100 text-green-800',
-  valorado: 'bg-blue-100 text-blue-800',
+  // Estados automáticos
+  creado: 'bg-gray-100 text-gray-800',
+  procesando_analisis: 'bg-yellow-100 text-yellow-800',
+  analisis_con_error: 'bg-red-100 text-red-800',
+  analisis_finalizado: 'bg-green-100 text-green-800',
+  // Estados manuales
+  evaluando_viabilidad: 'bg-blue-100 text-blue-800',
+  evaluando_plan_negocio: 'bg-purple-100 text-purple-800',
+  seguimiento_comercial: 'bg-indigo-100 text-indigo-800',
   descartado: 'bg-red-100 text-red-800',
-  error: 'bg-red-100 text-red-800',
 };
 
+/**
+ * Labels para estados - P0.1 Corrección Crítica
+ * Alineados con los nuevos estados del backend
+ */
 export const ESTADO_PROYECTO_LABELS: Record<EstadoProyecto, string> = {
-  borrador: 'Borrador',
-  en_proceso: 'En Proceso',
-  completado: 'Completado',
-  valorado: 'Valorado',
+  // Estados automáticos
+  creado: 'Creado',
+  procesando_analisis: 'En Análisis',
+  analisis_con_error: 'Análisis con Error',
+  analisis_finalizado: 'Análisis Finalizado',
+  // Estados manuales
+  evaluando_viabilidad: 'Evaluando Viabilidad',
+  evaluando_plan_negocio: 'Evaluando Plan de Negocio',
+  seguimiento_comercial: 'Seguimiento Comercial',
   descartado: 'Descartado',
-  error: 'Error',
 };

@@ -503,61 +503,6 @@ export async function handleEjecutarAnalisis(c: AppContext): Promise<Response> {
 }
 
 // ============================================================================
-// GET /api/pai/proyectos/:id/artefactos - Obtener Artefactos
-// ============================================================================
-
-export async function handleObtenerArtefactos(c: AppContext): Promise<Response> {
-  const db = getDB(c.env)
-  const idParam = c.req.param('id')
-  
-  if (!idParam) {
-    return c.json({ error: 'ID de proyecto inválido' }, 400)
-  }
-  
-  const proyectoId = parseInt(idParam)
-  
-  if (isNaN(proyectoId)) {
-    return c.json({ error: 'ID de proyecto inválido' }, 400)
-  }
-  
-  try {
-    // Verificar que el proyecto existe
-    const proyecto = await db
-      .prepare('SELECT PRO_id FROM PAI_PRO_proyectos WHERE PRO_id = ?')
-      .bind(proyectoId)
-      .first()
-    
-    if (!proyecto) {
-      return c.json({ error: 'Proyecto no encontrado' }, 404)
-    }
-    
-    // Obtener artefactos
-    const artefactosResult = await db
-      .prepare(`
-        SELECT 
-          a.ART_id as id,
-          a.ART_tipo_val_id as tipo_artefacto_id,
-          v.VAL_nombre as tipo,
-          a.ART_ruta as ruta_r2,
-          a.ART_fecha_generacion as fecha_creacion
-        FROM PAI_ART_artefactos a
-        JOIN PAI_VAL_valores v ON a.ART_tipo_val_id = v.VAL_id
-        WHERE a.ART_proyecto_id = ? AND a.ART_activo = 1
-        ORDER BY a.ART_fecha_generacion ASC
-      `)
-      .bind(proyectoId)
-      .all()
-    
-    return c.json({
-      artefactos: artefactosResult.results,
-    })
-  } catch (error) {
-    console.error('Error al obtener artefactos:', error)
-    return c.json({ error: 'Error interno del servidor' }, 500)
-  }
-}
-
-// ============================================================================
 // PUT /api/pai/proyectos/:id/estado - Cambiar Estado Manual
 // ============================================================================
 
@@ -778,12 +723,69 @@ export async function handleObtenerHistorial(c: AppContext): Promise<Response> {
     
     // Obtener eventos
     const eventos = await getEntityEvents(db, entityId, { limit: limite })
-    
+
     return c.json({
       eventos,
     })
   } catch (error) {
     console.error('Error al obtener historial:', error)
+    return c.json({ error: 'Error interno del servidor' }, 500)
+  }
+}
+
+// ============================================================================
+// GET /api/pai/proyectos/:id/artefactos - Obtener Artefactos
+// ============================================================================
+// P0.2 Corrección Crítica - Implementar endpoint faltante según diagnóstico FASE 2
+
+export async function handleObtenerArtefactos(c: AppContext): Promise<Response> {
+  const db = getDB(c.env)
+  const idParam = c.req.param('id')
+
+  if (!idParam) {
+    return c.json({ error: 'ID de proyecto inválido' }, 400)
+  }
+
+  const proyectoId = parseInt(idParam)
+
+  if (isNaN(proyectoId)) {
+    return c.json({ error: 'ID de proyecto inválido' }, 400)
+  }
+
+  try {
+    // Verificar que el proyecto existe
+    const proyecto = await db
+      .prepare('SELECT PRO_id FROM PAI_PRO_proyectos WHERE PRO_id = ?')
+      .bind(proyectoId)
+      .first()
+
+    if (!proyecto) {
+      return c.json({ error: 'Proyecto no encontrado' }, 404)
+    }
+
+    // Obtener artefactos con información del tipo
+    const artefactos = await db
+      .prepare(`
+        SELECT 
+          a.ART_id as id,
+          a.ART_proyecto_id as proyecto_id,
+          a.ART_tipo_val_id as tipo_artefacto_id,
+          v.VAL_nombre as tipo,
+          a.ART_ruta as ruta_r2,
+          a.ART_fecha_generacion as fecha_creacion
+        FROM PAI_ART_artefactos a
+        LEFT JOIN PAI_VAL_valores v ON a.ART_tipo_val_id = v.VAL_id
+        WHERE a.ART_proyecto_id = ?
+        ORDER BY a.ART_fecha_generacion ASC
+      `)
+      .bind(proyectoId)
+      .all()
+
+    return c.json({
+      artefactos: artefactos.results || [],
+    })
+  } catch (error) {
+    console.error('Error al obtener artefactos:', error)
     return c.json({ error: 'Error interno del servidor' }, 500)
   }
 }
