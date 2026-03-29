@@ -10,6 +10,8 @@ import { ESTADO_PROYECTO_LABELS, ESTADO_PROYECTO_COLORS, type ProyectoPAI } from
 import { ListaNotas } from '../../components/pai/ListaNotas';
 import { ModalCambioEstado } from '../../components/pai/ModalCambioEstado';
 import { VisualizadorMarkdown } from './VisualizadorMarkdown';
+import { BotonEjecutarAnalisis } from '../../components/pai/BotonEjecutarAnalisis';
+import { t } from '../../i18n';
 
 // G51-8: Función para formatear precio en formato español
 function formatPrecio(precio: string): string {
@@ -59,7 +61,7 @@ export function DetalleProyecto() {
   const [pestañaActiva, setPestañaActiva] = useState<'resumen' | 'datos' | 'otros'>('resumen');
 
   const { obtenerProyecto } = useObtenerProyecto();
-  const { ejecutarAnalisis, loading: loadingEjecutar } = useEjecutarAnalisis();
+  const { ejecutarAnalisis } = useEjecutarAnalisis();
   const { eliminarProyecto, loading: loadingEliminar } = useEliminarProyecto();
 
   useEffect(() => {
@@ -75,17 +77,28 @@ export function DetalleProyecto() {
     setLoading(false);
   };
 
-  const handleEjecutarAnalisis = async () => {
-    if (!proyecto) return;
-    if (!confirm('¿Estás seguro de ejecutar el análisis completo de este proyecto?')) return;
-
-    const resultado = await ejecutarAnalisis(proyecto.id);
-    if (resultado) {
-      alert('Análisis ejecutado correctamente');
-      cargarProyecto();
-    } else {
-      alert('Error al ejecutar análisis');
+  const handleEjecutarAnalisis = async (proyectoId: number) => {
+    if (!confirm(t('pai.analisis.confirmar_reejecucion'))) {
+      throw new Error('Cancelado por el usuario');
     }
+
+    const resultado = await ejecutarAnalisis(proyectoId, { forzar_reejecucion: true });
+
+    if (!resultado) {
+      throw new Error(t('pai.analisis.error'));
+    }
+
+    // Recargar datos del proyecto
+    await cargarProyecto();
+  };
+
+  const handleAnalisisSuccess = () => {
+    // Refrescar la vista después del éxito
+    cargarProyecto();
+  };
+
+  const handleAnalisisError = (errorMsg: string) => {
+    alert(t('pai.analisis.error') + ': ' + errorMsg);
   };
 
   const handleEliminarProyecto = async () => {
@@ -134,23 +147,21 @@ export function DetalleProyecto() {
               onClick={() => setMostrarModalEstado(true)}
               disabled={botonCambiarEstadoDeshabilitado}
               className={`px-3 py-2 border rounded-lg text-sm ${
-                botonCambiarEstadoDeshabilitado 
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                botonCambiarEstadoDeshabilitado
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'hover:bg-gray-50'
               }`}
               title={botonCambiarEstadoDeshabilitado ? 'El cambio de estado no está disponible hasta que el análisis esté finalizado' : ''}
             >
               Cambiar Estado
             </button>
-            {proyecto.estado !== 'procesando_analisis' && (
-              <button
-                onClick={handleEjecutarAnalisis}
-                disabled={loadingEjecutar}
-                className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50"
-              >
-                {loadingEjecutar ? 'Ejecutando...' : 'Ejecutar Análisis'}
-              </button>
-            )}
+            <BotonEjecutarAnalisis
+              proyectoId={proyecto.id}
+              estadoId={proyecto.estado_id}
+              onEjecutar={handleEjecutarAnalisis}
+              onSuccess={handleAnalisisSuccess}
+              onError={handleAnalisisError}
+            />
             <button
               onClick={handleEliminarProyecto}
               disabled={loadingEliminar}

@@ -107,11 +107,14 @@ export function useEjecutarAnalisis() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const ejecutarAnalisis = useCallback(async (id: number) => {
+  const ejecutarAnalisis = useCallback(async (
+    id: number,
+    options?: { forzar_reejecucion?: boolean }
+  ) => {
     setLoading(true);
     setError(null);
 
-    const response = await paiApiClient.ejecutarAnalisis(id);
+    const response = await paiApiClient.ejecutarAnalisis(id, options);
 
     setLoading(false);
 

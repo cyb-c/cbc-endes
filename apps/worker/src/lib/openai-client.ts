@@ -277,7 +277,7 @@ function extractTextFromOutput(data: Record<string, unknown>, tracking?: Trackin
 /**
  * Call OpenAI Responses API
  */
-async function callOpenAIResponses(
+export async function callOpenAIResponses(
   apiKey: string,
   requestBody: PromptRequest,
   tracking?: TrackingContext,

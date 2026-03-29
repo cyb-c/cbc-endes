@@ -514,29 +514,31 @@ export async function handleListarProyectos(c: AppContext): Promise<Response> {
 // ============================================================================
 // POST /api/pai/proyectos/:id/analisis - Ejecutar Análisis Completo
 // ============================================================================
+// WF-ANALISIS: Reemplaza implementación de simulación con IA real de 7 pasos
 
 export async function handleEjecutarAnalisis(c: AppContext): Promise<Response> {
   const db = getDB(c.env)
+  const r2Bucket = getR2Bucket(c.env)
   const idParam = c.req.param('id')
-  
+
   if (!idParam) {
     return c.json({ error: 'ID de proyecto inválido' }, 400)
   }
-  
+
   const proyectoId = parseInt(idParam)
-  
+
   if (isNaN(proyectoId)) {
     return c.json({ error: 'ID de proyecto inválido' }, 400)
   }
-  
+
   try {
     const body = await c.req.json<{ forzar_reejecucion?: boolean }>()
     const { forzar_reejecucion = false } = body
-    
-    // Verificar que el proyecto existe
+
+    // 1. Verificar que el proyecto existe
     const proyecto = await db
       .prepare(`
-        SELECT 
+        SELECT
           p.PRO_id as id,
           p.PRO_cii as cii,
           p.PRO_estado_val_id as estado_id,
@@ -546,50 +548,86 @@ export async function handleEjecutarAnalisis(c: AppContext): Promise<Response> {
       `)
       .bind(proyectoId)
       .first()
-    
+
     if (!proyecto) {
       return c.json({ error: 'Proyecto no encontrado' }, 404)
     }
+
+    // 2. Validar estado del proyecto (debe estar en 1, 2, 3, 4)
+    const { validarEstadoParaAnalisis } = await import('../services/ia-analisis-proyectos')
     
-    // Verificar si ya existe análisis
-    const artefactosExistentes = await db
-      .prepare('SELECT COUNT(*) as count FROM PAI_ART_artefactos WHERE ART_proyecto_id = ?')
-      .bind(proyectoId)
-      .first()
-    
-    const tieneAnalisis = artefactosExistentes && (artefactosExistentes.count as number) > 0
-    
-    if (tieneAnalisis && !forzar_reejecucion) {
-      return c.json({ error: 'Análisis ya existe. Usa forzar_reejecucion=true para re-ejecutar.' }, 409)
+    if (!validarEstadoParaAnalisis(proyecto.estado_id as number)) {
+      return c.json({
+        error: 'El estado actual no permite ejecutar análisis. Estados permitidos: CREADO (1), PROCESANDO_ANALISIS (2), ANALISIS_CON_ERROR (3), ANALISIS_FINALIZADO (4).',
+        estado_id: proyecto.estado_id,
+      }, 403)
     }
+
+    // 3. Obtener IJSON desde R2 (no desde D1)
+    const cii = proyecto.cii as string
+    const ijsonKey = `analisis-inmuebles/${cii}/${cii}.json`
+    const ijsonObject = await r2Bucket.get(ijsonKey)
     
-    // Obtener IJSON del proyecto
-    const ijsonResult = await db
-      .prepare('SELECT PRO_ijson FROM PAI_PRO_proyectos WHERE PRO_id = ?')
-      .bind(proyectoId)
-      .first()
+    let ijson: string
     
-    // NOTA: Por ahora, asumimos que el IJSON se guarda en una columna o se obtiene de R2
-    // En la implementación completa, el IJSON se guardaría en R2 al crear el proyecto
-    const ijson = ijsonResult?.PRO_ijson as string || '{}'
+    if (!ijsonObject) {
+      // Fallback: leer desde D1 si no está en R2
+      const ijsonResult = await db
+        .prepare('SELECT PRO_ijson FROM PAI_PRO_proyectos WHERE PRO_id = ?')
+        .bind(proyectoId)
+        .first()
+      
+      ijson = ijsonResult?.PRO_ijson as string || '{}'
+      
+      if (ijson === '{}') {
+        return c.json({ error: 'IJSON no encontrado' }, 404)
+      }
+    } else {
+      ijson = await ijsonObject.text()
+    }
+
+    // 4. Limpiar análisis anterior si existe (solo los 7 MD, no el IJSON)
+    if (forzar_reejecucion) {
+      const { limpiarAnalisisAnterior } = await import('../services/ia-analisis-proyectos')
+      const { iniciarTracking } = await import('../lib/tracking')
+      const tracking = iniciarTracking(`analisis-${proyectoId}-${Date.now()}`)
+      await limpiarAnalisisAnterior(c.env, cii, tracking)
+    }
+
+    // 5. Ejecutar análisis con IA real (7 pasos)
+    const { ejecutarAnalisisConIA } = await import('../services/ia-analisis-proyectos')
     
-    // Ejecutar análisis o re-ejecución
-    const resultado = tieneAnalisis && forzar_reejecucion
-      ? await reejecutarAnalisis(c.env, db, proyectoId, ijson)
-      : await ejecutarAnalisisCompleto(c.env, db, proyectoId, ijson)
-    
+    // Iniciar tracking
+    const trackingId = `analisis-${proyectoId}-${Date.now()}`
+    const { iniciarTracking } = await import('../lib/tracking')
+    const tracking = iniciarTracking(trackingId)
+
+    const resultado = await ejecutarAnalisisConIA(
+      c.env,
+      db,
+      proyectoId,
+      cii,
+      ijson,
+      tracking
+    )
+
     if (!resultado.exito) {
       return c.json({ error: resultado.error_mensaje }, 500)
     }
-    
-    const estadoNombre = await getVALNombre(db, proyecto.estado_id as number)
-    
+
+    // 6. Generar log.json en R2
+    const { completarTracking, generarLogJSON } = await import('../lib/tracking')
+    completarTracking(tracking)
+    await generarLogJSON(c.env, tracking, cii)
+
+    const estadoNombre = await getVALNombre(db, 4)  // ANALISIS_FINALIZADO
+
     return c.json({
       proyecto: {
         id: proyecto.id as number,
         cii: proyecto.cii as string,
-        estado_id: proyecto.estado_id as number,
-        estado: estadoNombre || 'Desconocido',
+        estado_id: 4,  // ANALISIS_FINALIZADO
+        estado: estadoNombre || 'Análisis Finalizado',
         fecha_ultima_actualizacion: new Date().toISOString(),
       },
       artefactos_generados: resultado.artefactos_generados,

@@ -156,8 +156,14 @@ class PaiApiClient {
    * Ejecutar análisis completo de un proyecto
    * POST /api/pai/proyectos/:id/analisis
    */
-  async ejecutarAnalisis(id: number): Promise<ApiResponse<EjecutarAnalisisResponse>> {
-    return this.post<EjecutarAnalisisResponse>(`/api/pai/proyectos/${id}/analisis`);
+  async ejecutarAnalisis(
+    id: number,
+    options?: { forzar_reejecucion?: boolean }
+  ): Promise<ApiResponse<EjecutarAnalisisResponse>> {
+    return this.post<EjecutarAnalisisResponse>(
+      `/api/pai/proyectos/${id}/analisis`,
+      options
+    );
   }
 
   /**

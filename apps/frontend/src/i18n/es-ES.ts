@@ -184,6 +184,14 @@ export const PAI_TEXTS: Record<string, string> = {
   'pai.botones.confirmar': 'Confirmar',
   'pai.botones.cancelar': 'Cancelar',
 
+  // Análisis - Estados del botón
+  'pai.analisis.ejecutar': 'Ejecutar Análisis',
+  'pai.analisis.en_progreso': 'Ejecutando paso {paso} de 7: {nombre}',
+  'pai.analisis.finalizado': 'Análisis Finalizado',
+  'pai.analisis.reintentar': 'Reintentar Análisis',
+  'pai.analisis.confirmar_reejecucion': '¿Desea re-ejecutar el análisis? Se reemplazarán los resultados anteriores.',
+  'pai.analisis.error': 'Error al ejecutar análisis: {mensaje}',
+
   // Mensajes - Éxito
   'pai.mensajes.exito.proyecto_creado': 'Proyecto creado correctamente',
   'pai.mensajes.exito.proyecto_actualizado': 'Proyecto actualizado correctamente',
