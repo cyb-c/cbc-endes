@@ -2,19 +2,19 @@
 
 ## Objetivo del workflow
 
-Definir el flujo de análisis de un proyecto ya creado dentro de la web-app, mediante la ejecución ordenada de ocho pasos de IA. Cada paso genera un archivo Markdown asociado al proyecto, persistido en R2 y mostrado después en la interfaz de usuario, siempre como resultado cerrado de una ejecución completa.
+Definir el flujo de análisis de un proyecto ya creado dentro de la web-app, mediante la ejecución ordenada de siete pasos de IA. Cada paso genera un archivo Markdown asociado al proyecto, persistido en R2 y mostrado después en la interfaz de usuario, siempre como resultado cerrado de una ejecución completa.
 
 ## Resumen de ejecución
 
 El workflow se lanza desde la pantalla de edición del proyecto mediante un botón llamado **análisis**. Ese botón solo debe estar disponible mientras el estado del proyecto sea anterior a `EVALUANDO_VIABILIDAD`.
 
-Cuando el usuario pulsa el botón, se inicia una ejecución compuesta por ocho pasos fijos. Cada paso corresponde a un prompt ya definido en un archivo JSON dentro de la carpeta `prompts-ia`. La entrada base del proceso es el IJSON ya guardado en la subcarpeta del proyecto.
+Cuando el usuario pulsa el botón, se inicia una ejecución compuesta por siete pasos fijos. Cada paso corresponde a un prompt ya definido en un archivo JSON dentro de la carpeta `prompts-ia`. La entrada base del proceso es el IJSON ya guardado en la subcarpeta del proyecto.
 
-Si ya hubo una ejecución anterior, antes de empezar deben borrarse los ocho archivos MD existentes. Si es la primera ejecución, no se borra nada.
+Si ya hubo una ejecución anterior, antes de empezar deben borrarse los siete archivos MD existentes. Si es la primera ejecución, no se borra nada.
 
 Durante la ejecución, el botón debe reflejar el avance mostrando el número y el nombre del paso actual. Sin embargo, los resultados no deben mostrarse al usuario hasta que el análisis haya terminado.
 
-Cada paso genera un archivo MD. Los pasos 1 a 5 producen salidas base. Los pasos 6, 7 y 8 usan como entrada el IJSON más los resultados de los pasos 2, 3, 4 y 5. Si la ejecución finaliza correctamente, el usuario permanece en la misma pantalla de edición, se refresca la vista y se muestran las ocho pestañas con el análisis finalizado.
+Cada paso genera un archivo MD. Los pasos 1 a 4 producen salidas base. Los pasos 5, 6 y 7 usan como entrada el IJSON más los resultados de los pasos 1, 2, 3 y 4. Si la ejecución finaliza correctamente, el usuario permanece en la misma pantalla de edición, se refresca la vista y se muestran las siete pestañas con el análisis finalizado.
 
 ## Punto de partida del workflow
 
@@ -70,14 +70,13 @@ Cada paso genera un archivo MD. Los pasos 1 a 5 producen salidas base. Los pasos
 
 ### Relación de prompts del workflow
 
-* `01_DatosClave.json`
-* `02_ActivoFisico.json`
-* `03_ActivoEstrategico.json`
-* `04_ActivoFinanciero.json`
-* `05_ActivoRegulado.json`
-* `06_Inversor.json`
-* `07_EmprendedorOperador.json`
-* `08_Propietario.json`
+* `01_ActivoFisico.json`
+* `02_ActivoEstrategico.json`
+* `03_ActivoFinanciero.json`
+* `04_ActivoRegulado.json`
+* `05_Inversor.json`
+* `06_EmprendedorOperador.json`
+* `07_Propietario.json`
 
 ## Estructura general del workflow
 
@@ -93,7 +92,7 @@ Cada paso genera un archivo MD. Los pasos 1 a 5 producen salidas base. Los pasos
   * no se borra ningún archivo MD previo.
 * Si ya hubo una ejecución anterior:
 
-  * antes de empezar deben borrarse los ocho archivos MD existentes.
+  * antes de empezar deben borrarse los siete archivos MD existentes.
 
 ## Desarrollo paso a paso del workflow
 
@@ -123,7 +122,7 @@ Cada paso genera un archivo MD. Los pasos 1 a 5 producen salidas base. Los pasos
   * no se elimina nada.
 * Si ya hubo una ejecución anterior:
 
-  * deben borrarse los ocho archivos MD existentes antes de iniciar los nuevos pasos.
+  * deben borrarse los siete archivos MD existentes antes de iniciar los nuevos pasos.
 
 ## 3. Lectura de recursos base
 
@@ -132,7 +131,7 @@ Cada paso genera un archivo MD. Los pasos 1 a 5 producen salidas base. Los pasos
 
 ## 4. Ejecución del paso 1
 
-* Se ejecuta el prompt `01_DatosClave.json`.
+* Se ejecuta el prompt `01_ActivoFisico.json`.
 * La entrada base es el IJSON del proyecto.
 * El resultado debe ser un archivo MD.
 
@@ -145,10 +144,10 @@ Cada paso genera un archivo MD. Los pasos 1 a 5 producen salidas base. Los pasos
 * Si el paso 1 falla:
 
   * el workflow se detiene completamente;
-  * no deben ejecutarse los pasos 2 a 8;
+  * no deben ejecutarse los pasos 2 a 7;
   * el usuario permanece en la pantalla de edición y recibe la notificación de error.
 
-## 5. Ejecución de los pasos 2, 3, 4 y 5
+## 5. Ejecución de los pasos 2, 3 y 4
 
 * Se ejecutan en orden fijo.
 * Cada uno usa el mismo IJSON del proyecto.
@@ -157,21 +156,17 @@ Cada paso genera un archivo MD. Los pasos 1 a 5 producen salidas base. Los pasos
 
 ### Paso 2
 
-* Prompt: `02_ActivoFisico.json`
+* Prompt: `02_ActivoEstrategico.json`
 
 ### Paso 3
 
-* Prompt: `03_ActivoEstrategico.json`
+* Prompt: `03_ActivoFinanciero.json`
 
 ### Paso 4
 
-* Prompt: `04_ActivoFinanciero.json`
+* Prompt: `04_ActivoRegulado.json`
 
-### Paso 5
-
-* Prompt: `05_ActivoRegulado.json`
-
-### Casuística del bloque 2-5
+### Casuística del bloque 2-4
 
 * Si un paso termina correctamente:
 
@@ -179,67 +174,67 @@ Cada paso genera un archivo MD. Los pasos 1 a 5 producen salidas base. Los pasos
 * Si uno de estos pasos falla:
 
   * los archivos MD ya generados correctamente deben conservarse;
-  * los pasos 6, 7 y 8 no deben ejecutarse;
+  * los pasos 5, 6 y 7 no deben ejecutarse;
   * el usuario permanece en la pantalla de edición y recibe la notificación de error.
 
-## 6. Validación de dependencias para los pasos 6, 7 y 8
+## 6. Validación de dependencias para los pasos 5, 6 y 7
 
 Antes de ejecutar el bloque final, deben existir correctamente estos cinco elementos:
 
 * IJSON;
+* resultado del paso 1;
 * resultado del paso 2;
 * resultado del paso 3;
-* resultado del paso 4;
-* resultado del paso 5.
+* resultado del paso 4.
 
 ### Casuística
 
 * Si falta cualquiera de esos elementos:
 
-  * los pasos 6, 7 y 8 no deben ejecutarse.
+  * los pasos 5, 6 y 7 no deben ejecutarse.
 * Si todos existen correctamente:
 
   * puede iniciarse el bloque final.
 
-## 7. Ejecución del paso 6
+## 7. Ejecución del paso 5
 
 * Se ejecuta el prompt `06_Inversor.json`.
 * Usa como parámetros:
 
   * IJSON;
+  * resultado del paso 1;
   * resultado del paso 2;
   * resultado del paso 3;
-  * resultado del paso 4;
-  * resultado del paso 5.
+  * resultado del paso 4.
 * Genera un archivo MD.
 
-## 8. Ejecución del paso 7
+## 8. Ejecución del paso 6
 
 * Se ejecuta el prompt `07_EmprendedorOperador.json`.
 * Usa como parámetros:
 
   * IJSON;
+  * resultado del paso 1;
   * resultado del paso 2;
   * resultado del paso 3;
-  * resultado del paso 4;
-  * resultado del paso 5.
+  * resultado del paso 4.
 * Genera un archivo MD.
 
-## 9. Ejecución del paso 8
+## 9. Ejecución del paso 7
 
 * Se ejecuta el prompt `08_Propietario.json`.
 * Usa como parámetros:
 
   * IJSON;
+  * resultado del paso 1;
   * resultado del paso 2;
   * resultado del paso 3;
-  * resultado del paso 4;
-  * resultado del paso 5.
+  * resultado del paso 4.
 * Genera un archivo MD.
 
-### Casuística del bloque 6-8
+### Casuística del bloque 5-7
 
-* Los pasos 6, 7 y 8 son independientes entre sí una vez que existen correctamente sus dependencias de entrada.
+* Los pasos 5, 6 y 7 son independientes entre sí una vez que existen correctamente sus dependencias de entrada.
 * Si uno de ellos falla:
 
   * no deben seguir ejecutándose los demás;
@@ -269,7 +264,7 @@ Antes de ejecutar el bloque final, deben existir correctamente estos cinco eleme
   * el usuario no debe ver resultados parciales.
 * Si el análisis finaliza correctamente:
 
-  * deben mostrarse las ocho pestañas con sus ocho resultados.
+  * deben mostrarse las siete pestañas con sus siete resultados.
 
 ## 12. Finalización del workflow
 
@@ -285,7 +280,7 @@ El resultado visible correcto del workflow debe entenderse como:
 
 Eso implica que:
 
-* los ocho pasos previstos han sido ejecutados;
+* los siete pasos previstos han sido ejecutados;
 * cada paso ha producido su archivo MD correspondiente;
 * los resultados están persistidos en la subcarpeta del proyecto;
 * la pantalla de edición refleja el análisis completo en sus pestañas correspondientes.
@@ -296,9 +291,9 @@ Eso implica que:
 
 * El proyecto está en un estado anterior a `EVALUANDO_VIABILIDAD`.
 * El usuario pulsa el botón análisis.
-* Si hubo una ejecución anterior, se borran los ocho MD previos.
-* Se ejecutan los ocho pasos conforme a sus dependencias.
-* Se generan los ocho MD.
+* Si hubo una ejecución anterior, se borran los siete MD previos.
+* Se ejecutan los siete pasos conforme a sus dependencias.
+* Se generan los siete MD.
 * Se refresca la pantalla.
 * El usuario ve el resultado como **análisis finalizado**.
 
@@ -309,14 +304,14 @@ Eso implica que:
 * No se ejecuta ningún paso posterior.
 * El usuario permanece en edición y recibe la notificación.
 
-### Casos de error en pasos 2-5
+### Casos de error en pasos 2-4
 
 * Falla cualquiera de esos pasos.
 * Se conservan los MD que ya se hayan generado correctamente.
-* No se ejecutan los pasos 6, 7 y 8.
+* No se ejecutan los pasos 5, 6 y 7.
 * El usuario permanece en edición y recibe la notificación.
 
-### Casos de error en pasos 6-8
+### Casos de error en pasos 5-7
 
 * Falla uno de esos pasos.
 * Los otros dos no deben seguir ejecutándose.
@@ -330,4 +325,4 @@ Eso implica que:
 
 ## Síntesis final
 
-Este segundo workflow define un proceso de análisis sobre un proyecto ya existente. Se inicia desde la edición del proyecto, usa como base el IJSON archivado y ejecuta ocho prompts fijos leídos desde `prompts-ia`. Su lógica combina un primer paso bloqueante, un bloque intermedio de resultados base y un bloque final dependiente de los resultados 2, 3, 4 y 5. El proceso puede repetirse tantas veces como sea necesario, sustituyendo los resultados anteriores, pero el usuario solo debe ver el resultado cuando el análisis haya concluido. El resultado funcional esperado es un único estado visible y cerrado: **análisis finalizado**.
+Este segundo workflow define un proceso de análisis sobre un proyecto ya existente. Se inicia desde la edición del proyecto, usa como base el IJSON archivado y ejecuta siete prompts fijos leídos desde `prompts-ia`. Su lógica combina un primer paso bloqueante, un bloque intermedio de resultados base y un bloque final dependiente de los resultados 1, 2, 3 y 4. El proceso puede repetirse tantas veces como sea necesario, sustituyendo los resultados anteriores, pero el usuario solo debe ver el resultado cuando el análisis haya concluido. El resultado funcional esperado es un único estado visible y cerrado: **análisis finalizado**.

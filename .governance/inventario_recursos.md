@@ -3,7 +3,6 @@
 > **Finalidad:** Fuente única de verdad para recursos Cloudflare, CI/CD, bindings, variables de entorno y configuración operativa del proyecto.
 > **Versión:** 16.0
 > **Importante:** Este archivo es gestionado exclusivamente por el agente `inventariador`. Las modificaciones directas serán rechazadas.
-> **Última actualización:** 2026-03-28 (FASE 4: Integración y Pruebas - COMPLETADA + Tracking + OpenAI)
 
 ---
 
@@ -84,16 +83,13 @@
 
 | Nombre | Binding | App/Proyecto | Puerto Dev | Estado CF | URL Producción | Último Deploy | Notas |
 |--------|---------|--------------|------------|-----------|----------------|---------------|-------|
-| `wk-backend` | `db_binding_01, r2_binding_01, secrets_kv` | Backend API (dev) | 8787 | ✅ | https://wk-backend-dev.cbconsulting.workers.dev | 2026-03-28 | FASE 4 COMPLETADA + IA DESPLEGADA: 10 endpoints PAI operativos, integración OpenAI activa (KV + R2 prompts), servicio creación proyectos con IA funcional, correcciones SQL aplicadas, pruebas E2E 100% aprobadas |
-| `worker-cbc-endes-dev` | N/A | Backend API (dev) | 8787 | ❌ Eliminado | - | 2026-03-26 | Recurso de prueba eliminado |
-
-**Nota:** El Worker `wk-backend` está activo y proporciona endpoints para el menú dinámico y PAI. El Worker de prueba `worker-cbc-endes-dev` fue eliminado el 2026-03-27.
+| `wk-backend-dev` | `db_binding_01, r2_binding_01, secrets_kv` | Backend API (dev) | 8787 | ✅ | https://wk-backend-dev-dev.cbconsulting.workers.dev | 2026-03-28 | FASE 4 COMPLETADA + IA DESPLEGADA: 10 endpoints PAI operativos, integración OpenAI activa (KV + R2 prompts), servicio creación proyectos con IA funcional, correcciones SQL aplicadas, pruebas E2E 100% aprobadas |
 
 ### 4.2 KV Namespaces
 
 | Nombre en CF | ID | Binding | App | Estado |
 |--------------|----|---------|-----|--------|
-| `secretos-cbconsulting` | `50eb21ab606d4fd5a409e532347cf686` | `secrets_kv` | `wk-backend` | ✅ Creado (secret `OPENAI_API_KEY` configurado) |
+| `secretos-cbconsulting` | `50eb21ab606d4fd5a409e532347cf686` | `secrets_kv` | `wk-backend-dev` | ✅ Creado (secret `OPENAI_API_KEY` configurado) |
 
 **Secrets configurados:**
 - `OPENAI_API_KEY` - API Key para OpenAI Responses API
@@ -102,18 +98,9 @@
 
 | Nombre | Binding | App | ID | Estado | Notas |
 |--------|---------|-----|----|--------|-------|
-| `db-cbconsulting` | `db_binding_01` | `wk-backend` | `fafcd5e2-b960-49f7-8502-88a0f8ba5052` | ✅ | Menú dinámico v1 + PAI (tablas PAI_PRO_proyectos, PAI_VAL_valores modificadas en FASE 4) |
-| `cbc-endes-db-test` | DB | worker-cbc-endes | `22892bef-3878-4ef0-bd7d-d28bc9656914` | ❌ Eliminada | Recurso de prueba eliminado |
+| `db-cbconsulting` | `db_binding_01` | `wk-backend-dev` | `fafcd5e2-b960-49f7-8502-88a0f8ba5052` | ✅ | Menú dinámico v1 + PAI (tablas PAI_PRO_proyectos, PAI_VAL_valores modificadas en FASE 4) |
 
 **Nota:** La D1 Database `db-cbconsulting` está activa y contiene las tablas del menú dinámico y PAI.
-
-**Cambios en FASE 4 (2026-03-28):**
-- Tabla `PAI_PRO_proyectos`: Columna `PRO_ijson` agregada y funcional (migración 009)
-- Tabla `PAI_PRO_proyectos`: Columna `PRO_fecha_ultima_actualizacion` operativa
-- Tabla `PAI_VAL_valores`: Valor `ACTIVO` para `TIPO_NOTA` agregado (migración 005 corregida)
-- Tabla `PAI_VAL_valores`: Valor `RESUMEN_EJECUTIVO` agregado (VAL_id: 38)
-- Tabla `PAI_NOT_notas`: Columna `NOT_estado_val_id` nullable (migración 010)
-- **Pruebas E2E:** 100% aprobables (8/8 casos) tras correcciones P0
 
 **Migraciones aplicadas:**
 - ✅ `005-pai-mvp-datos-iniciales.sql` (corregida con INSERT OR IGNORE)
@@ -127,8 +114,7 @@
 
 | Nombre | Binding | App | Estado | Notas |
 |--------|---------|-----|--------|-------|
-| `r2-cbconsulting` | `r2_binding_01` | `wk-backend` | ✅ | Bucket R2 para almacenamiento de archivos PAI y prompts de IA |
-| `cbc-endes-storage-test` | BUCKET | worker-cbc-endes | ❌ Eliminado | Recurso de prueba eliminado |
+| `r2-cbconsulting` | `r2_binding_01` | `wk-backend-dev` | ✅ | Bucket R2 para almacenamiento de archivos PAI y prompts de IA |
 
 **Estructura de carpetas:**
 ```
@@ -175,7 +161,9 @@ r2-cbconsulting/
 
 | Proyecto | URL Producción | URL Preview | App Asociada | Proveedor Git | Estado |
 |----------|----------------|-------------|--------------|---------------|--------|
-| `pg-cbc-endes` | https://388b71e5.pg-cbc-endes.pages.dev | https://d00e4cdb.pg-cbc-endes.pages.dev | TailAdmin React + PAI | GitHub | ✅ |
+| `pg-cbc-endes` | https://pg-cbc-endes.pages.dev | https://pg-cbc-endes.pages.dev | TailAdmin React + PAI | GitHub | ✅ |
+
+Nota: No cambiar ni modificar la URL `pg-cbc-endes`. https://pg-cbc-endes.pages.dev es la única URL permitida  en deb y en producción.
 
 **Configuración:**
 - Production branch: `main`
@@ -219,8 +207,6 @@ r2-cbconsulting/
 |-----------------|------|--------|-----------|---------------|
 | `db_binding_01` | D1 Database | ✅ | `apps/worker/wrangler.toml` | Binding para `db-cbconsulting` |
 | `r2_binding_01` | R2 Bucket | ✅ | `apps/worker/wrangler.toml` | Binding al bucket `r2-cbconsulting` para almacenamiento de archivos PAI |
-| `DB` | D1 Database | ❌ Eliminado | - | Binding eliminado (D1 eliminada) |
-| `BUCKET` | R2 Bucket | ❌ Eliminado | - | Binding eliminado (R2 eliminado) |
 | `VITE_API_BASE_URL` | Variable frontend | ✅ | `apps/frontend/wrangler.toml` | URL de la API backend |
 | `VITE_ENVIRONMENT` | Variable frontend | ✅ | `apps/frontend/wrangler.toml` | Entorno de ejecución |
 
@@ -228,7 +214,7 @@ r2-cbconsulting/
 
 ## 6. Variables de Entorno por App
 
-### `wk-backend` (Backend)
+### `wk-backend-dev` (Backend)
 
 | Variable | Tipo | Sensible | Descripción | Estado |
 |----------|------|----------|-------------|--------|
@@ -241,13 +227,13 @@ r2-cbconsulting/
 |----------|------|----------|-------------|--------|
 | *Por definir* | String | Sí | Variables para integraciones externas | 🔲 |
 
-> **Nota:** El backend `worker-cbc-endes` fue eliminado. El backend activo es `wk-backend`.
+> **Nota:** El backend `worker-cbc-endes` fue eliminado. El backend activo es `wk-backend-dev`.
 
 ### `pg-cbc-endes` (Frontend Pages)
 
 | Variable | Tipo | Sensible | Descripción | Estado | Valor Producción |
 |----------|------|----------|-------------|--------|------------------|
-| `VITE_API_BASE_URL` | String | No | URL base del backend API | ✅ | https://wk-backend-dev.cbconsulting.workers.dev |
+| `VITE_API_BASE_URL` | String | No | URL base del backend API | ✅ | https://wk-backend-dev-dev.cbconsulting.workers.dev |
 | `VITE_ENVIRONMENT` | String | No | Entorno (dev/preview/production) | ✅ | production |
 
 **Archivo de configuración:** `apps/frontend/.env.production` (creado en FASE 4)
@@ -269,18 +255,18 @@ r2-cbconsulting/
 
 | Servicio Origen | Servicio Destino | Endpoint | Método | Request | Response | Estado |
 |-----------------|------------------|----------|--------|---------|----------|--------|
-| Frontend (Pages) | `wk-backend` | `/api/menu` | GET | Ninguno | JSON con estructura de menú agrupada por módulos | ✅ |
-| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos` | POST | `{ ijson: string }` | `{ proyecto: {...} }` | ✅ |
-| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id` | GET | Ninguno | `{ proyecto: {...}, artefactos: [...], notas: [...] }` | ✅ |
-| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos` | GET | Query params (filtros, paginación) | `{ proyectos: [...], paginacion: {...} }` | ✅ |
-| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id/analisis` | POST | `{ forzar_reejecucion?: boolean }` | `{ proyecto: {...}, artefactos_generados: [...] }` | ✅ |
-| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id/artefactos` | GET | Ninguno | `{ artefactos: [...] }` | ✅ |
-| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id/estado` | PUT | `{ estado_id: number, ... }` | `{ proyecto: {...} }` | ✅ |
-| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id` | DELETE | Ninguno | `{ mensaje: "...", proyecto_eliminado: {...} }` | ✅ |
-| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id/pipeline` | GET | Query params (limite) | `{ eventos: [...] }` | ✅ |
-| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id/pipeline` | GET | `?tipo=cambio_estado` | `{ eventos: [...] }` | ✅ (FASE 3 P1.3) |
-| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id/notas` | POST | `{ tipo_nota_id, autor, contenido }` | `{ nota: {...} }` | ✅ |
-| Frontend (Pages) | `wk-backend` | `/api/pai/proyectos/:id/notas/:notaId` | PUT | `{ contenido: string }` | `{ nota: {...} }` | ✅ |
+| Frontend (Pages) | `wk-backend-dev` | `/api/menu` | GET | Ninguno | JSON con estructura de menú agrupada por módulos | ✅ |
+| Frontend (Pages) | `wk-backend-dev` | `/api/pai/proyectos` | POST | `{ ijson: string }` | `{ proyecto: {...} }` | ✅ |
+| Frontend (Pages) | `wk-backend-dev` | `/api/pai/proyectos/:id` | GET | Ninguno | `{ proyecto: {...}, artefactos: [...], notas: [...] }` | ✅ |
+| Frontend (Pages) | `wk-backend-dev` | `/api/pai/proyectos` | GET | Query params (filtros, paginación) | `{ proyectos: [...], paginacion: {...} }` | ✅ |
+| Frontend (Pages) | `wk-backend-dev` | `/api/pai/proyectos/:id/analisis` | POST | `{ forzar_reejecucion?: boolean }` | `{ proyecto: {...}, artefactos_generados: [...] }` | ✅ |
+| Frontend (Pages) | `wk-backend-dev` | `/api/pai/proyectos/:id/artefactos` | GET | Ninguno | `{ artefactos: [...] }` | ✅ |
+| Frontend (Pages) | `wk-backend-dev` | `/api/pai/proyectos/:id/estado` | PUT | `{ estado_id: number, ... }` | `{ proyecto: {...} }` | ✅ |
+| Frontend (Pages) | `wk-backend-dev` | `/api/pai/proyectos/:id` | DELETE | Ninguno | `{ mensaje: "...", proyecto_eliminado: {...} }` | ✅ |
+| Frontend (Pages) | `wk-backend-dev` | `/api/pai/proyectos/:id/pipeline` | GET | Query params (limite) | `{ eventos: [...] }` | ✅ |
+| Frontend (Pages) | `wk-backend-dev` | `/api/pai/proyectos/:id/pipeline` | GET | `?tipo=cambio_estado` | `{ eventos: [...] }` | ✅ (FASE 3 P1.3) |
+| Frontend (Pages) | `wk-backend-dev` | `/api/pai/proyectos/:id/notas` | POST | `{ tipo_nota_id, autor, contenido }` | `{ nota: {...} }` | ✅ |
+| Frontend (Pages) | `wk-backend-dev` | `/api/pai/proyectos/:id/notas/:notaId` | PUT | `{ contenido: string }` | `{ nota: {...} }` | ✅ |
 
 **Endpoints del Worker:**
 
@@ -314,10 +300,6 @@ r2-cbconsulting/
 | Styling | Tailwind CSS | Latest | ✅ |
 | Runtime | Cloudflare Workers | Latest | ✅ |
 | Deployment | Wrangler | 4.75.0 | ✅ |
-
-**Recursos eliminados (Fase 1 de prueba):**
-- Cloudflare D1 ❌
-- Cloudflare R2 ❌
 
 ---
 
@@ -428,26 +410,6 @@ wrangler secret put [SECRET_NAME] --env dev
 
 ---
 
-## 12. Vacíos Pendientes de Confirmación
-
-| Elemento | Tipo | Observaciones | Responsable |
-|----------|------|---------------|-------------|
-| Migración 005 | Base de Datos | Requiere re-ejecución en producción con datos corregidos (INSERT OR IGNORE) | Pendiente de corrección |
-| Workflows | Recurso | Orquestación de prompts contra IA | Usuario (Fase 2) |
-| Autenticación de usuarios | Auth | No requerido para MVP | Usuario (Fase 3) |
-| CI/CD con GitHub Actions | Pipeline | No requerido según usuario | Usuario (opcional) |
-
-**RESUELTOS en FASE 4:**
-- ✅ ~~Error endpoint cambio de estado~~ - Endpoint funcional post-correcciones
-- ✅ ~~Columna PRO_ijson faltante~~ - Agregada en migración 009
-- ✅ ~~Valor ACTIVO para TIPO_NOTA~~ - Agregado en migración 005 corregida
-- ✅ ~~R2 Bucket definitivo~~ - Usando `r2-cbconsulting` con estructura documentada
-- ✅ ~~Integraciones externas~~ - OpenAI Responses API implementada y operativa
-
-> **Nota:** El Worker backend (`wk-backend`) y la D1 Database (`db-cbconsulting`) están desplegados y activos. Los vacíos de columna PRO_ijson y valor ACTIVO para TIPO_NOTA fueron **RESUELTOS** en FASE 2 P0.1.
-
----
-
 ## 13. Historial de Cambios
 
 | Fecha | Cambio | Responsable | Aprobado Por |
@@ -461,60 +423,10 @@ wrangler secret put [SECRET_NAME] --env dev
 | 2026-03-28 | Actualización v10.0 - FASE 2 P0/P1 y FASE 3 P0/P1 completadas (correcciones críticas e importantes) | inventariador | Pendiente aprobación usuario |
 | 2026-03-28 | Actualización v9.0 - FASE 4: Integración y Pruebas completada (i18n, .env.production, Migraciones 007/008, Despliegue Pages, Pruebas E2E) | inventariador | Pendiente aprobación usuario |
 | 2026-03-27 | Actualización v7.0 - FASE 1 PAI completada: Pipeline Events, Esquema PAI (PRO/ATR/VAL/NOT/ART), R2 Storage | Orchestrator | Aprobado |
-| 2026-03-27 | Despliegue de menú dinámico v1: Worker `wk-backend`, D1 `db-cbconsulting`, binding `db_binding_01`, endpoint `/api/menu` | inventariador | usuario |
+| 2026-03-27 | Despliegue de menú dinámico v1: Worker `wk-backend-dev`, D1 `db-cbconsulting`, binding `db_binding_01`, endpoint `/api/menu` | inventariador | usuario |
 | 2026-03-27 | Eliminación de recursos de prueba (Worker, D1, R2) | inventariador | usuario |
 | 2026-03-26 | Despliegue de frontend TailAdmin en Pages | inventariador | usuario |
 | 2026-03-26 | Fase 1: Creación de recursos de prueba (Worker, D1, R2, Pages) | inventariador | usuario |
-
----
-
-## 14. Estado Actual de Recursos
-
-| Recurso | Nombre | Estado | Notas |
-|---------|--------|--------|-------|
-| Worker | `wk-backend` | ✅ Activo | FASE 4 COMPLETADA + IA + Tracking: 10 endpoints PAI operativos, integración OpenAI activa (KV + R2 prompts), servicio creación proyectos con IA funcional, sistema de tracking con log.json en R2, wrangler tail operativo, correcciones SQL aplicadas, migraciones 005/009/010 funcionales |
-| Worker | `worker-cbc-endes-dev` | ❌ Eliminado | Recurso de prueba temporal |
-| Pages | `pg-cbc-endes` | ✅ Activo | FASE 4 COMPLETADA: i18n multiidioma (es-ES por defecto, en-US disponible), módulo PAI integrado, paginación UI, 9 pestañas de análisis, visualizador Markdown |
-| D1 Database | `db-cbconsulting` | ✅ Activo | FASE 4 COMPLETADA: Tablas PAI con columnas PRO_ijson y PRO_fecha_ultima_actualizacion operativas, valor ACTIVO para TIPO_NOTA agregado, NOT_estado_val_id nullable |
-| D1 Database | `cbc-endes-db-test` | ❌ Eliminado | Recurso de prueba temporal |
-| R2 Bucket | `r2-cbconsulting` | ✅ Activo | FASE 4 COMPLETADA: Bucket R2 para almacenamiento de archivos PAI, prompts de IA (`prompts-ia/`), y logs de tracking (`{CII}_log.json`) |
-| R2 Bucket | `cbc-endes-storage-test` | ❌ Eliminado | Recurso de prueba temporal |
-| KV Namespace | `secretos-cbconsulting` | ✅ Activo | FASE 4 COMPLETADA: KV namespace para `OPENAI_API_KEY` (ID: `50eb21ab606d4fd5a409e532347cf686`) |
-
----
-
-## 15. Próximos Pasos (Corrección de Problemas Identificados)
-
-### Problemas RESUELTOS en FASE 4:
-
-| # | Problema | Estado | Solución |
-|---|----------|--------|----------|
-| 1 | Agregar columna PRO_ijson a PAI_PRO_proyectos | ✅ RESUELTO | Migración 009 aplicada, handler actualizado para guardar IJSON |
-| 2 | Agregar valor ACTIVO para TIPO_NOTA | ✅ RESUELTO | Migración 005 corregida con INSERT OR IGNORE |
-| 3 | Paginación UI no implementada | ✅ RESUELTO | Componente Paginacion.tsx (FASE 3 P1.1) |
-| 4 | 9 pestañas de análisis no implementadas | ✅ RESUELTO | Componente ResultadosAnalisis.tsx (FASE 3 P0.2) |
-| 5 | Visualizador Markdown no implementado | ✅ RESUELTO | Componente VisualizadorMarkdown.tsx (FASE 3 P1.2) |
-| 6 | Editabilidad de notas sin validación | ✅ RESUELTO | Hook useNotaEditable.ts (FASE 3 P1.3) |
-| 7 | Soporte multiidioma incompleto | ✅ RESUELTO | i18n con es-ES y en-US (FASE 4 P2.1) |
-| 8 | INSERT de artefactos sin ART_nombre | ✅ RESUELTO | Corrección en simulacion-ia.ts |
-| 9 | Consultas SQL con nombres de columnas incorrectos | ✅ RESUELTO | Corrección en simulacion-ia.ts |
-
-### Pruebas E2E:
-
-| Caso de Prueba | Estado | Observación |
-|----------------|--------|-------------|
-| TC-PAI-001: Crear proyecto | ✅ Aprobado | Funcional |
-| TC-PAI-002: Ejecutar análisis | ✅ Aprobado | PRO_ijson guardado correctamente |
-| TC-PAI-003: Visualizar resultados | ✅ Aprobable | Artefactos generados en R2 |
-| TC-PAI-004: Crear nota | ✅ Aprobado | Valor ACTIVO disponible |
-| TC-PAI-005: Editar nota | ✅ Aprobable | Editabilidad validada por pipeline |
-| TC-PAI-006: Cambiar estado | ✅ Aprobado | Endpoint funcional |
-| TC-PAI-007: Re-ejecutar análisis | ✅ Aprobable | Re-ejecución disponible |
-| TC-PAI-008: Eliminar proyecto | ✅ Aprobado | Funcional |
-
-**Cobertura de Pruebas:** 100% (8/8 casos aprobados o aprobables)
-
-> **Nota:** FASE 4 COMPLETADA EXITOSAMENTE. El Worker backend (`wk-backend`) y la D1 Database (`db-cbconsulting`) están desplegados y activos con todas las correcciones aplicadas. El frontend está desplegado en Cloudflare Pages con i18n multiidioma (es-ES por defecto, en-US disponible). Todas las pruebas E2E son aprobables.
 
 ---
 
@@ -545,14 +457,6 @@ wrangler secret put [SECRET_NAME] --env dev
    - log.json almacenado en R2: `analisis-inmuebles/{CII}/{CII}_log.json`
    - Wrangler tail: Disponible para debugging en tiempo real
    - Documentación: `plans/proyecto-PIA/doc-base/tracking-workflow.md`
-
----
-
-> **Nota:** Este inventario refleja el estado actual del proyecto tras la finalización COMPLETA de FASE 4 (Integración y Pruebas) con integración OpenAI DESPLEGADA y sistema de tracking operativo. Los recursos activos incluyen el Worker backend (`wk-backend`) con 10 endpoints PAI operativos, integración OpenAI activa (KV `secretos-cbconsulting` con ID confirmado, prompts en R2 `prompts-ia/`), servicio de creación de proyectos con IA (`ia-creacion-proyectos.ts`), sistema de tracking con log.json en R2 (`tracking.ts`), wrangler tail operativo para debugging, correcciones SQL aplicadas, la D1 Database (`db-cbconsulting`) con tablas PAI completamente funcionales (columna PRO_ijson operativa, valor ACTIVO para TIPO_NOTA agregado, NOT_estado_val_id nullable, PRO_resumen_ejecutivo operativo), el bucket R2 (`r2-cbconsulting`) para almacenamiento de artefactos, prompts de IA y logs de tracking, y el proyecto Pages (`pg-cbc-endes`) con frontend desplegado en producción (https://388b71e5.pg-cbc-endes.pages.dev) con i18n multiidioma implementado (es-ES por defecto, en-US disponible). **Todas las pruebas E2E son aprobables (100% cobertura). La creación de proyectos con IA está operativa. El tracking genera log.json en R2 para cada proyecto.**
-
----
-
-## Notas de Mantenimiento (Continuación)
 
 10. **Documentación Técnica FASE 4:**
     - `plans/proyecto-PIA/doc-base/integracion-openai-api.md` - Documentación completa de integración con OpenAI

@@ -82,6 +82,7 @@ export interface ProyectoPAI {
   estado_id: number;
   ijson?: string;
   resumen_ejecutivo?: string;
+  fecha_analisis?: string | null;
   datos_basicos: DatosBasicosInmueble;
   fecha_creacion: string;
   fecha_actualizacion?: string;

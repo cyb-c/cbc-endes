@@ -292,7 +292,7 @@ export async function handleObtenerProyecto(c: AppContext): Promise<Response> {
     // Obtener proyecto
     const proyecto = await db
       .prepare(`
-        SELECT 
+        SELECT
           p.PRO_id as id,
           p.PRO_cii as cii,
           p.PRO_titulo as titulo,
@@ -300,7 +300,7 @@ export async function handleObtenerProyecto(c: AppContext): Promise<Response> {
           p.PRO_motivo_val_id as motivo_valoracion_id,
           p.PRO_portal_nombre as portal,
           p.PRO_portal_url as url_fuente,
-          p.PRO_operacion as tipo_operacion,
+          p.PRO_operacion as operacion,
           p.PRO_tipo_inmueble as tipo_inmueble,
           p.PRO_precio as precio,
           p.PRO_superficie_construida_m2 as superficie_construida_m2,
@@ -308,6 +308,7 @@ export async function handleObtenerProyecto(c: AppContext): Promise<Response> {
           p.PRO_barrio_distrito as barrio,
           p.PRO_direccion as direccion,
           p.PRO_fecha_alta as fecha_alta,
+          p.PRO_fecha_analisis as fecha_analisis,
           p.PRO_fecha_ultima_actualizacion as fecha_ultima_actualizacion
         FROM PAI_PRO_proyectos p
         WHERE p.PRO_id = ?
@@ -363,7 +364,7 @@ export async function handleObtenerProyecto(c: AppContext): Promise<Response> {
         datos_basicos: {
           portal: proyecto.portal as string,
           url_fuente: proyecto.url_fuente as string,
-          tipo_operacion: proyecto.tipo_operacion as string,
+          operacion: proyecto.operacion as string,
           tipo_inmueble: proyecto.tipo_inmueble as string,
           precio: proyecto.precio as string,
           precio_por_m2: '0', // Calcular si es necesario
@@ -374,6 +375,8 @@ export async function handleObtenerProyecto(c: AppContext): Promise<Response> {
           provincia: '', // Calcular si es necesario
           barrio: proyecto.barrio as string || '',
           direccion: proyecto.direccion as string || '',
+          fecha_alta: proyecto.fecha_alta as string,
+          fecha_analisis: proyecto.fecha_analisis as string | null,
         },
       },
       artefactos: artefactosResult.results,

@@ -14,22 +14,40 @@ import { VisualizadorMarkdown } from './VisualizadorMarkdown';
 // G51-8: Función para formatear precio en formato español
 function formatPrecio(precio: string): string {
   if (!precio) return '-';
-  
+
   // Eliminar cualquier símbolo de moneda existente
   const cleanPrice = precio.replace(/[^0-9.,]/g, '');
-  
+
   // Intentar parsear como número
   const num = parseFloat(cleanPrice.replace(',', '.'));
-  
+
   if (isNaN(num)) return precio;
-  
+
   // Formatear con separador de miles (.) y decimales (,)
   const formatted = num.toLocaleString('es-ES', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  
+
   return `${formatted} €`;
+}
+
+// G51-10: Función para formatear fecha como dd/mm/yyyy hh:mm
+function formatFecha(fecha: string | null | undefined): string {
+  if (!fecha) return '-';
+  
+  try {
+    const date = new Date(fecha);
+    return date.toLocaleString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return '-';
+  }
 }
 
 export function DetalleProyecto() {
@@ -105,9 +123,9 @@ export function DetalleProyecto() {
               </span>
             </div>
             <div className="text-sm text-gray-600">
-              {/* G51-1: Fecha de alta formateada como DD/MM/YYYY */}
+              {/* G51-1: Fecha del análisis formateada como DD/MM/YYYY HH:MM */}
               <span className="mr-4">CII: <code className="bg-gray-100 px-2 py-1 rounded">{proyecto.cii}</code></span>
-              <span>Fecha Alta: {proyecto.fecha_creacion ? new Date(proyecto.fecha_creacion).toLocaleDateString('es-ES') : '-'}</span>
+              <span>Fecha del análisis: {formatFecha(proyecto.fecha_analisis)}</span>
             </div>
           </div>
           <div className="flex space-x-2">
@@ -207,10 +225,10 @@ export function DetalleProyecto() {
             <div className="mt-1">{proyecto.datos_basicos?.direccion || '-'}</div>
           </div>
           
-          {/* G51-1: Fecha de alta formateada */}
+          {/* G51-1: Fecha de alta formateada como dd/mm/yyyy hh:mm */}
           <div>
             <label className="block text-sm font-medium text-gray-600">Fecha de Alta</label>
-            <div className="mt-1">{proyecto.fecha_creacion ? new Date(proyecto.fecha_creacion).toLocaleDateString('es-ES') : '-'}</div>
+            <div className="mt-1">{formatFecha(proyecto.datos_basicos?.fecha_alta)}</div>
           </div>
         </div>
       </div>
