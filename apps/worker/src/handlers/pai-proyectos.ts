@@ -598,31 +598,74 @@ export async function handleEjecutarAnalisis(c: AppContext): Promise<Response> {
 }
 
 // ============================================================================
+// GET /api/pai/estados-disponibles - Obtener Estados Disponibles para Cambio
+// ============================================================================
+// G62: Endpoint para obtener estados filtrados correctamente
+
+export async function handleObtenerEstadosDisponibles(c: AppContext): Promise<Response> {
+  const db = getDB(c.env)
+
+  try {
+    // Obtener estados filtrados según requerimiento G62:
+    // - VAL_atr_id = 1 (ESTADO_PROYECTO)
+    // - VAL_id > 4 y VAL_id < 9 (solo estados manuales)
+    // - VAL_activo = 1
+    // - ORDER BY VAL_orden
+    const estadosResult = await db
+      .prepare(`
+        SELECT v.VAL_id, v.VAL_nombre, v.VAL_orden
+        FROM PAI_VAL_valores v
+        JOIN PAI_ATR_atributos a ON v.VAL_atr_id = a.ATR_id
+        WHERE a.ATR_codigo = 'ESTADO_PROYECTO'
+          AND v.VAL_id > 4
+          AND v.VAL_id < 9
+          AND v.VAL_activo = 1
+        ORDER BY v.VAL_orden
+      `)
+      .all()
+
+    return c.json({
+      estados: estadosResult.results || [],
+    })
+  } catch (error) {
+    console.error('Error al obtener estados disponibles:', error)
+    return c.json({ error: 'Error interno del servidor' }, 500)
+  }
+}
+
+// ============================================================================
 // PUT /api/pai/proyectos/:id/estado - Cambiar Estado Manual
 // ============================================================================
+// G63: Corregido para aceptar estado_id numérico
 
 export async function handleCambiarEstado(c: AppContext): Promise<Response> {
   const db = getDB(c.env)
   const idParam = c.req.param('id')
-  
+
   if (!idParam) {
     return c.json({ error: 'ID de proyecto inválido' }, 400)
   }
-  
+
   const proyectoId = parseInt(idParam)
-  
+
   if (isNaN(proyectoId)) {
     return c.json({ error: 'ID de proyecto inválido' }, 400)
   }
-  
+
   try {
+    // G63: Corregido para aceptar estado_id numérico directamente
     const body = await c.req.json<{ estado_id: number; motivo_valoracion_id?: number; motivo_descarte_id?: number }>()
     const { estado_id, motivo_valoracion_id, motivo_descarte_id } = body
-    
+
+    // Validar que estado_id sea numérico y válido
+    if (!estado_id || typeof estado_id !== 'number') {
+      return c.json({ error: 'estado_id es requerido y debe ser un número' }, 400)
+    }
+
     // Verificar que el proyecto existe
     const proyecto = await db
       .prepare(`
-        SELECT 
+        SELECT
           p.PRO_id as id,
           p.PRO_cii as cii,
           p.PRO_estado_val_id as estado_id
@@ -631,34 +674,35 @@ export async function handleCambiarEstado(c: AppContext): Promise<Response> {
       `)
       .bind(proyectoId)
       .first()
-    
+
     if (!proyecto) {
       return c.json({ error: 'Proyecto no encontrado' }, 404)
     }
-    
+
     // Actualizar estado
     await db
       .prepare(`
         UPDATE PAI_PRO_proyectos
-        SET PRO_estado_val_id = ?, 
+        SET PRO_estado_val_id = ?,
             PRO_motivo_val_id = ?,
+            PRO_motivo_descarte_id = ?,
             PRO_fecha_ultima_actualizacion = ?
         WHERE PRO_id = ?
       `)
-      .bind(estado_id, motivo_valoracion_id || null, new Date().toISOString(), proyectoId)
+      .bind(estado_id, motivo_valoracion_id || null, motivo_descarte_id || null, new Date().toISOString(), proyectoId)
       .run()
-    
+
     // Registrar evento de pipeline
     await insertPipelineEvent(db, {
       entityId: `proyecto-${proyectoId}`,
       paso: 'cambiar_estado',
       nivel: 'INFO',
       tipoEvento: 'STEP_SUCCESS',
-      detalle: 'Estado cambiado manualmente',
+      detalle: `Estado cambiado a ${estado_id}`,
     })
-    
+
     const estadoNombre = await getVALNombre(db, estado_id)
-    
+
     return c.json({
       proyecto: {
         id: proyecto.id as number,

@@ -10,6 +10,7 @@ import {
   handleCambiarEstado,
   handleEliminarProyecto,
   handleObtenerHistorial,
+  handleObtenerEstadosDisponibles,
 } from './handlers/pai-proyectos';
 import {
   handleCrearNota,
@@ -86,6 +87,9 @@ app.delete('/api/pai/proyectos/:id', handleEliminarProyecto);
 
 // Obtener historial de ejecución
 app.get('/api/pai/proyectos/:id/pipeline', handleObtenerHistorial);
+
+// Obtener estados disponibles para cambio
+app.get('/api/pai/estados-disponibles', handleObtenerEstadosDisponibles);
 
 // ============================================================================
 // PAI Notas Endpoints
