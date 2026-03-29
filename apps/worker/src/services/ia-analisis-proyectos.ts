@@ -354,12 +354,16 @@ export async function ejecutarAnalisisConIA(
     }> = []
     
     for (const artefacto of artefactosGuardados) {
-      const tipoVal = tiposArtefactos.find(
-        t => t.VAL_codigo === artefacto.nombre.toUpperCase().replace('-', '_')
-      )
+      // artefacto.nombre es como 'analisis-fisico', necesitamos 'ANALISIS_FISICO'
+      const valCodigo = artefacto.nombre.toUpperCase().replace(/-/g, '_')
       
+      const tipoVal = tiposArtefactos.find(
+        t => t.VAL_codigo === valCodigo
+      )
+
       if (!tipoVal) {
-        console.error(`Tipo de artefacto no encontrado: ${artefacto.nombre}`)
+        console.error(`Tipo de artefacto no encontrado: ${artefacto.nombre} (buscado: ${valCodigo})`)
+        console.error(`Tipos disponibles:`, tiposArtefactos.map(t => t.VAL_codigo))
         continue
       }
       

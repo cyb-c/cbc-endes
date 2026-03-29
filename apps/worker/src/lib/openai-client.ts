@@ -292,9 +292,9 @@ export async function callOpenAIResponses(
   }
 
   try {
-    // Add timeout to prevent hanging (120 seconds for complex prompts)
+    // Add timeout to prevent hanging (180 seconds for complex prompts with gpt-5.4)
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 120000) // 120 second timeout (2 minutes)
+    const timeoutId = setTimeout(() => controller.abort(), 180000) // 180 second timeout (3 minutes)
 
     const response = await fetch(url, {
       method: 'POST',

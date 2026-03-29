@@ -88,15 +88,16 @@ export interface ProgresoAnalisis {
 
 /**
  * Artifact type codes for PAI_ART_artefactos
+ * Must match VAL_codigo in PAI_VAL_valores where ATR_codigo = 'TIPO_ARTEFACTO'
  */
 export const TIPOS_ARTEFACTOS = [
-  'ACTIVO_FISICO',
-  'ACTIVO_ESTRATEGICO',
-  'ACTIVO_FINANCIERO',
-  'ACTIVO_REGULADO',
-  'INVERSOR',
-  'EMPRENDEDOR_OPERADOR',
-  'PROPIETARIO',
+  'ANALISIS_FISICO',
+  'ANALISIS_ESTRATEGICO',
+  'ANALISIS_FINANCIERO',
+  'ANALISIS_REGULATORIO',
+  'LECTURA_INVERSOR',
+  'LECTURA_OPERADOR',
+  'LECTURA_PROPIETARIO',
 ] as const
 
 export type TipoArtefacto = typeof TIPOS_ARTEFACTOS[number]

@@ -309,7 +309,9 @@ export async function handleObtenerProyecto(c: AppContext): Promise<Response> {
           p.PRO_direccion as direccion,
           p.PRO_fecha_alta as fecha_alta,
           p.PRO_fecha_analisis as fecha_analisis,
-          p.PRO_fecha_ultima_actualizacion as fecha_ultima_actualizacion
+          p.PRO_fecha_ultima_actualizacion as fecha_ultima_actualizacion,
+          p.PRO_resumen_ejecutivo as resumen_ejecutivo,
+          p.PRO_ijson as ijson
         FROM PAI_PRO_proyectos p
         WHERE p.PRO_id = ?
       `)
@@ -361,6 +363,8 @@ export async function handleObtenerProyecto(c: AppContext): Promise<Response> {
       proyecto: {
         ...proyecto,
         estado: estadoNombre || 'Desconocido',
+        resumen_ejecutivo: proyecto.resumen_ejecutivo as string | null,
+        ijson: proyecto.ijson as string | null,
         datos_basicos: {
           portal: proyecto.portal as string,
           url_fuente: proyecto.url_fuente as string,
@@ -946,7 +950,7 @@ export async function handleObtenerArtefactos(c: AppContext): Promise<Response> 
     // Obtener artefactos con información del tipo
     const artefactos = await db
       .prepare(`
-        SELECT 
+        SELECT
           a.ART_id as id,
           a.ART_proyecto_id as proyecto_id,
           a.ART_tipo_val_id as tipo_artefacto_id,
@@ -966,6 +970,62 @@ export async function handleObtenerArtefactos(c: AppContext): Promise<Response> 
     })
   } catch (error) {
     console.error('Error al obtener artefactos:', error)
+    return c.json({ error: 'Error interno del servidor' }, 500)
+  }
+}
+
+// ============================================================================
+// GET /api/pai/proyectos/:id/artefactos/:artefactoId/contenido - Obtener Contenido de Artefacto
+// ============================================================================
+
+export async function handleObtenerContenidoArtefacto(c: AppContext): Promise<Response> {
+  const db = getDB(c.env)
+  const r2Bucket = getR2Bucket(c.env)
+  const idParam = c.req.param('id')
+  const artefactoIdParam = c.req.param('artefactoId')
+
+  if (!idParam || !artefactoIdParam) {
+    return c.json({ error: 'IDs inválidos' }, 400)
+  }
+
+  const proyectoId = parseInt(idParam)
+  const artefactoId = parseInt(artefactoIdParam)
+
+  if (isNaN(proyectoId) || isNaN(artefactoId)) {
+    return c.json({ error: 'IDs inválidos' }, 400)
+  }
+
+  try {
+    // Obtener información del artefacto
+    const artefacto = await db
+      .prepare(`
+        SELECT
+          a.ART_id as id,
+          a.ART_ruta as ruta_r2
+        FROM PAI_ART_artefactos a
+        WHERE a.ART_proyecto_id = ? AND a.ART_id = ?
+      `)
+      .bind(proyectoId, artefactoId)
+      .first()
+
+    if (!artefacto) {
+      return c.json({ error: 'Artefacto no encontrado' }, 404)
+    }
+
+    // Obtener contenido desde R2
+    const r2Object = await r2Bucket.get(artefacto.ruta_r2 as string)
+
+    if (!r2Object) {
+      return c.json({ error: 'Contenido no encontrado en R2' }, 404)
+    }
+
+    const contenido = await r2Object.text()
+
+    return c.json({
+      contenido: contenido,
+    })
+  } catch (error) {
+    console.error('Error al obtener contenido del artefacto:', error)
     return c.json({ error: 'Error interno del servidor' }, 500)
   }
 }

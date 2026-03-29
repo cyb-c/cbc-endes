@@ -11,6 +11,7 @@ import {
   handleEliminarProyecto,
   handleObtenerHistorial,
   handleObtenerEstadosDisponibles,
+  handleObtenerContenidoArtefacto,
 } from './handlers/pai-proyectos';
 import {
   handleCrearNota,
@@ -88,6 +89,9 @@ app.get('/api/pai/proyectos/:id/pipeline', handleObtenerHistorial);
 
 // Obtener estados disponibles para cambio
 app.get('/api/pai/estados-disponibles', handleObtenerEstadosDisponibles);
+
+// Obtener contenido de artefacto
+app.get('/api/pai/proyectos/:id/artefactos/:artefactoId/contenido', handleObtenerContenidoArtefacto);
 
 // ============================================================================
 // PAI Notas Endpoints
