@@ -80,17 +80,25 @@ export async function handleCrearNota(c: AppContext): Promise<Response> {
   }
   
   try {
-    const body = await c.req.json<{ tipo_nota_id: number; autor: string; contenido: string }>()
-    const { tipo_nota_id, autor, contenido } = body
-    
+    const body = await c.req.json<{ tipo_nota_id: number; autor: string; asunto: string; contenido: string }>()
+    const { tipo_nota_id, autor, asunto, contenido } = body
+
     // Validar datos
-    if (!tipo_nota_id || !autor || !contenido) {
-      return c.json({ error: 'Datos de nota inválidos. Se requieren: tipo_nota_id, autor, contenido' }, 400)
+    if (!tipo_nota_id || !autor || !asunto || !contenido) {
+      return c.json({ error: 'Datos de nota inválidos. Se requieren: tipo_nota_id, autor, asunto, contenido' }, 400)
     }
-    
-    // Verificar que el proyecto existe
+
+    // Verificar que el proyecto existe y obtener su estado actual
     const proyecto = await db
-      .prepare('SELECT PRO_id FROM PAI_PRO_proyectos WHERE PRO_id = ?')
+      .prepare(`
+        SELECT 
+          p.PRO_id,
+          p.PRO_estado_val_id,
+          v.VAL_nombre as estado_nombre
+        FROM PAI_PRO_proyectos p
+        JOIN PAI_VAL_valores v ON p.PRO_estado_val_id = v.VAL_id
+        WHERE p.PRO_id = ?
+      `)
       .bind(proyectoId)
       .first()
 
@@ -98,46 +106,47 @@ export async function handleCrearNota(c: AppContext): Promise<Response> {
       return c.json({ error: 'Proyecto no encontrado' }, 404)
     }
 
-    // P0.3 Corrección Crítica: Eliminar referencia a ESTADO_NOTA (atributo inexistente)
-    // La tabla PAI_NOT_notas no requiere estado_val_id según diagnóstico FASE 2
-
-    // Insertar nota (sin estado_val_id)
+    // Insertar nota con asunto y estado_proyecto_creacion
     const insertResult = await db
       .prepare(`
         INSERT INTO PAI_NOT_notas (
           NOT_proyecto_id, NOT_tipo_val_id, NOT_asunto, NOT_nota,
+          NOT_estado_val_id,  -- Guarda VAL_id como referencia (nullable según migración 010)
           NOT_editable, NOT_usuario_alta
-        ) VALUES (?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `)
       .bind(
         proyectoId,
         tipo_nota_id,
-        autor, // Usamos el autor como asunto por ahora
+        asunto,  // ✅ Ahora usa el asunto real
         contenido,
-        1, // editable
+        proyecto.PRO_estado_val_id,  // ✅ Guarda estado como referencia
+        1,  // editable
         autor,
       )
       .run()
-    
+
     const notaId = insertResult.meta.last_row_id
-    
+
     // Registrar evento de pipeline
     await insertPipelineEvent(db, {
       entityId: `proyecto-${proyectoId}`,
       paso: 'crear_nota',
       nivel: 'INFO',
       tipoEvento: 'STEP_SUCCESS',
-      detalle: `Nota creada: ${notaId}`,
+      detalle: `Nota creada: ${notaId}, estado_proyecto_creacion: ${proyecto.estado_nombre}`,
     })
-    
+
     const tipoNombre = await getVALNombre(db, tipo_nota_id)
-    
+
     return c.json({
       nota: {
         id: notaId,
         proyecto_id: proyectoId,
         tipo_nota_id,
         tipo: tipoNombre || 'Desconocido',
+        asunto,  // ✅ Incluye asunto
+        estado_proyecto_creacion: proyecto.estado_nombre,  // ✅ Incluye estado como VAL_nombre
         autor,
         contenido,
         fecha_creacion: new Date().toISOString(),

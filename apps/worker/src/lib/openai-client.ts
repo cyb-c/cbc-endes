@@ -283,15 +283,19 @@ export async function callOpenAIResponses(
   tracking?: TrackingContext,
 ): Promise<PromptResult> {
   const url = 'https://api.openai.com/v1/responses'
-  
+
   if (tracking) {
     registrarEvento(tracking, 'openai-http-request', 'INFO', 'Enviando HTTP POST a OpenAI', {
       url,
       model: requestBody.model,
     })
   }
-  
+
   try {
+    // Add timeout to prevent hanging (120 seconds for complex prompts)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 120000) // 120 second timeout (2 minutes)
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -299,7 +303,10 @@ export async function callOpenAIResponses(
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify(requestBody),
+      signal: controller.signal,
     })
+
+    clearTimeout(timeoutId)
     
     if (tracking) {
       registrarEvento(tracking, 'openai-http-response', 'INFO', 'Respuesta HTTP recibida', {
