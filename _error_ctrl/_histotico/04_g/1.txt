@@ -1,0 +1,331 @@
+﻿LOG WRANGLER:
+@ 3/28/2026, 10:51:44 PM
+POST https://wk-backend-dev.cbconsulting.workers.dev/api/pai/proyectos - Ok @ 3/28/2026, 10:51:44 PM
+  (log) [TRACKING:handler-inicio] Iniciando handler de creación de proyecto {}
+  (log) [TRACKING:request-received] Request recibido {
+  ijson_length: 7005,
+  ijson_preview: '{\n' +
+    '  "url_fuente": "https://www.indomio.es/anuncios/100451526/",\n' +
+    '  "portal_inmobiliario": "Indomio",\n'
+}
+  (log) [TRACKING:validar-ijson] Validando IJSON {}
+  (log) [TRACKING:validar-ijson-ok] IJSON válido {}
+  (log) [TRACKING:ia-inicio] Iniciando extracción con IA {}
+  (log) [TRACKING:ia-creacion-inicio] Iniciando creación de proyecto con IA { ijson_length: 7005 }
+  (log) [TRACKING:ia-ejecutar-prompt] Ejecutando prompt desde R2 { prompt: '00_CrearProyecto.json' }
+  (log) [TRACKING:openai-inicio] Iniciando llamada a OpenAI { prompt: '00_CrearProyecto.json' }
+  (log) [TRACKING:openai-obtener-api-key] Obteniendo API key desde KV {}
+  (log) [TRACKING:openai-api-key-obtenida] API key obtenida desde KV { key_length: 164, key_prefix: 'sk-proj-I4...' }
+  (log) [TRACKING:openai-cargar-prompt] Cargando prompt desde R2 { key: 'prompts-ia/00_CrearProyecto.json' }
+  (log) [TRACKING:openai-prompt-cargado] Prompt cargado desde R2 { key: 'prompts-ia/00_CrearProyecto.json', size_bytes: 6129 }
+  (log) [TRACKING:openai-preparar-request] Preparando request body {}
+  (log) [TRACKING:openai-llamar-api] Llamando a OpenAI Responses API { model: 'gpt-5' }
+  (log) [TRACKING:openai-http-request] Enviando HTTP POST a OpenAI { url: 'https://api.openai.com/v1/responses', model: 'gpt-5' }
+  (log) [TRACKING:openai-http-response] Respuesta HTTP recibida { status: 200, statusText: 'OK' }
+  (log) [TRACKING:openai-raw-response] Respuesta completa de OpenAI {
+  raw_response: {
+    id: 'resp_0432ce9b033169de0069c85b80e5308194b43519a43d647297',
+    object: 'response',
+    created_at: 1774738304,
+    status: 'completed',
+    background: false,
+    billing: { payer: 'developer' },
+    completed_at: 1774738357,
+    error: null,
+    frequency_penalty: 0,
+    incomplete_details: null,
+    instructions: 'Eres un extractor y redactor especializado en fichas inmobiliarias y en resúmenes ejecutivos de inmuebles.\n' +
+      '\n' +
+      'Tu tarea es leer un único objeto JSON de entrada y devolver exclusivamente un único objeto JSON de salida con datos estructurados del inmueble y un resumen ejecutivo redactado a partir de la información explícita contenida en el JSON de entrada.\n' +
+      '\n' +
+      'REGLAS OBLIGATORIAS\n' +
+      '\n' +
+      '1. Usa exclusivamente la información presente de forma explícita en el archivo JSON de entrada.\n' +
+      '2. No inventes datos.\n' +
+      '3. No deduzcas, no presupongas y no completes información ausente.\n' +
+      '4. No utilices información externa.\n' +
+      '5. No alteres, no corrijas y no reformules el contenido factual del archivo JSON al extraer campos estructurados.\n' +
+      '6. Si un dato necesario para un campo no aparece de forma explícita en el JSON de entrada, devuelve ese campo como cadena vacía: "".\n' +
+      '7. Devuelve siempre todos los campos requeridos en el JSON final, aunque algunos queden vacíos.\n' +
+      '8. El campo pro_resumen_ejecutivo debe contener un resumen ejecutivo redactado únicamente con información explícita del JSON de entrada.\n' +
+      '9. El contenido de pro_resumen_ejecutivo debe estar en Markdown y debe comenzar siempre con el encabezado exacto: ## RESUMEN\n' +
+      '10. El contenido de pro_resumen_ejecutivo debe mantener el estilo del resumen original: breve, claro, preciso, natural, profesional, sobrio y orientado a presentar el inmueble de forma clara.\n' +
+      '11. En pro_resumen_ejecutivo no uses tablas ni listas.\n' +
+      '12. En pro_resumen_ejecutivo escribe entre uno y tres párrafos, con una extensión aproximada de 90 a 180 palabras, salvo que la información disponible no permita alcanzar esa longitud sin forzar contenido.\n' +
+      '13. No copies literalmente la estructura del archivo JSON ni conviertas el resumen en una enumeración de campos.\n' +
+      '14. Evita repeticiones, muletillas y reformulaciones redundantes.\n' +
+      '15. Si el contenido del JSON es inválido, está vacío o no contiene información suficiente para elaborar un resumen útil y fiable, entonces pro_resumen_ejecutivo debe contener exactamente este texto: No fue posible elaborar un resumen fiable con la información proporcionada.\n' +
+      '16. Aunque pro_resumen_ejecutivo no pueda elaborarse de forma fiable, debes seguir devolviendo el objeto JSON completo con todos los campos requeridos, rellenando con valores explícitos cuando existan y con "" cuando no existan.\n' +
+      '17. No incluyas advertencias, explicaciones metodológicas, comentarios sobre el proceso ni texto adicional fuera del objeto JSON final.\n' +
+      '18. La salida final debe ser únicamente JSON válido.\n' +
+      '19. No devuelvas Markdown fuera del campo pro_resumen_ejecutivo.\n' +
+      '20. No devuelvas bloques de código, comillas envolventes, comentarios ni texto introductorio.\n' +
+      '\n' +
+      'OBJETIVO DEL RESUMEN\n' +
+      '\n' +
+      'Genera en pro_resumen_ejecutivo una descripción ejecutiva del inmueble que sintetice únicamente la información relevante presente en el archivo JSON.\n' +
+      '\n' +
+      'Prioriza, si aparecen, los elementos en este orden:\n' +
+      '1. tipo de inmueble\n' +
+      '2. tipo de operación\n' +
+      '3. ubicación\n' +
+      '4. precio\n' +
+      '5. superficie\n' +
+      '6. distribución\n' +
+      '7. estado de conservación\n' +
+      '8. características destacables\n' +
+      '9. elementos de valor comercial o funcional\n' +
+      '\n' +
+      'Debes priorizar la información más útil para comprender el inmueble de un vistazo.\n' +
+      '\n' +
+      'MAPEO DE CAMPOS DE SALIDA\n' +
+      '\n' +
+      'Extrae y devuelve estos campos en el objeto JSON final:\n' +
+      '- pro_titulo\n' +
+      '- pro_portal_nombre\n' +
+      '- pro_portal_url\n' +
+      '- pro_operacion\n' +
+      '- pro_tipo_inmueble\n' +
+      '- pro_precio\n' +
+      '- pro_superficie_construida_m2\n' +
+      '- pro_ciudad\n' +
+      '- pro_barrio_distrito\n' +
+      '- pro_direccion\n' +
+      '- pro_resumen_ejecutivo\n' +
+      '\n' +
+      'CRITERIOS DE CONSTRUCCIÓN DE CAMPOS\n' +
+      '\n' +
+      '1. pro_portal_nombre: corresponde al nombre del portal inmobiliario presente explícitamente en el JSON de entrada.\n' +
+      '2. pro_portal_url: corresponde a la URL fuente o URL del anuncio presente explícitamente en el JSON de entrada.\n' +
+      '3. pro_operacion: corresponde al tipo de operación presente explícitamente en el JSON de entrada.\n' +
+      '4. pro_tipo_inmueble: corresponde al tipo de inmueble presente explícitamente en el JSON de entrada.\n' +
+      '5. pro_precio: corresponde al precio presente explícitamente en el JSON de entrada.\n' +
+      '6. pro_superficie_construida_m2: corresponde a la superficie construida en metros cuadrados presente explícitamente en el JSON de entrada.\n' +
+      '7. pro_ciudad: corresponde a la ciudad presente explícitamente en el JSON de entrada.\n' +
+      '8. pro_barrio_distrito: si aparecen barrio y distrito de forma explícita, compón el valor como "{barrio}, {distrito}". Si solo aparece uno de los dos, usa únicamente ese. Si no aparece ninguno, devuelve "".\n' +
+      '9. pro_direccion: corresponde a la dirección presente explícitamente en el JSON de entrada.\n' +
+      '10. pro_titulo: constrúyelo exclusivamente concatenando, en este orden, los valores finales de pro_tipo_inmueble, pro_operacion, pro_precio y pro_barrio_distrito. Usa un separador natural y limpio entre elementos. No inventes conectores que añadan información nueva. Si falta alguno de esos valores, omítelo de la concatenación sin mencionarlo. Si todos faltan, devuelve "".\n' +
+      '11. pro_resumen_ejecutivo: debe contener el resumen ejecutivo en Markdown siguiendo todas las reglas anteriores.\n' +
+      '\n' +
+      'FORMATO DE SALIDA\n' +
+      '\n' +
+      'Devuelve únicamente un objeto JSON válido con esta estructura exacta de claves:\n' +
+      '{\n' +
+      '  "pro_titulo": "",\n' +
+      '  "pro_portal_nombre": "",\n' +
+      '  "pro_portal_url": "",\n' +
+      '  "pro_operacion": "",\n' +
+      '  "pro_tipo_inmueble": "",\n' +
+      '  "pro_precio": "",\n' +
+      '  "pro_superficie_construida_m2": "",\n' +
+      '  "pro_ciudad": "",\n' +
+      '  "pro_barrio_distrito": "",\n' +
+      '  "pro_direccion": "",\n' +
+      '  "pro_resumen_ejecutivo": ""\n' +
+      '}\n' +
+      '\n' +
+      'Instrucción final:\n' +
+      'Lee el archivo JSON de entrada y devuelve únicamente el objeto JSON final con los campos requeridos, usando solo información explícita del JSON de entrada. El único campo que debe contener texto redactado es pro_resumen_ejecutivo, y debe ir en Markdown dentro del valor del campo. No devuelvas nada fuera del JSON final.',
+    max_output_tokens: null,
+    max_tool_calls: null,
+    model: 'gpt-5-2025-08-07',
+    output: [ [Object], [Object] ],
+    parallel_tool_calls: true,
+    presence_penalty: 0,
+    previous_response_id: null,
+    prompt_cache_key: null,
+    prompt_cache_retention: null,
+    reasoning: { effort: 'medium', summary: null },
+    safety_identifier: null,
+    service_tier: 'default',
+    store: true,
+    temperature: 1,
+    text: { format: [Object], verbosity: 'medium' },
+    tool_choice: 'auto',
+    tools: [],
+    top_logprobs: 0,
+    top_p: 1,
+    truncation: 'disabled',
+    usage: {
+      input_tokens: 3337,
+      input_tokens_details: [Object],
+      output_tokens: 3027,
+      output_tokens_details: [Object],
+      total_tokens: 6364
+    },
+    user: null,
+    metadata: {}
+  },
+  has_output_text: false,
+  has_output: true,
+  output_type: 'array',
+  has_usage: true,
+  model: 'gpt-5-2025-08-07'
+}
+  (log) [TRACKING:openai-extract-text] Extrayendo texto de respuesta { output_text_length: 0, output_text_preview: '' }
+  (log) [TRACKING:openai-result] Resultado normalizado { text_length: 0, total_tokens: 6364 }
+  (log) [TRACKING:openai-completado] Llamada a OpenAI completada { response_length: 0 }
+  (log) [TRACKING:ia-prompt-completado] Prompt ejecutado correctamente {
+  response_length: 0,
+  has_usage: true,
+  has_raw: true,
+  usage_tokens: 6364,
+  response_preview: ''
+}
+  (log) [TRACKING:ia-parse-json] Parseando respuesta JSON { response_length: 0, response_first_char: '' }
+  (error) [TRACKING ERROR] ia-parse-json-fallido: La IA no devolvió un JSON válido Error: La IA no devolvió un JSON válido
+  (error) [TRACKING ERROR] ia-fallido: La IA no devolvió un JSON válido Error: La IA no devolvió un JSON válido
+---
+Análisis del error por chatgpt:
+"Lo que falla no parece ser la ejecución de OpenAI, sino tu **extracción de la respuesta**.
+
+La llamada **sí terminó bien**:
+
+* `status: 'completed'`
+* `error: null`
+* `has_output: true`
+* `output_type: 'array'`
+* `output_tokens: 3027`
+
+Eso indica que el modelo **sí generó salida**, pero tu código la está buscando en el sitio equivocado. La documentación de Responses dice que `output` es un array cuyo orden y contenido puede variar, y que `output_text` es solo una propiedad de conveniencia del SDK que agrega texto **solo si existen items `output_text`** en `output`. No conviene asumir que toda respuesta útil vendrá en `response.output_text`. ([Plataforma OpenAI][1])
+
+En tu log se ve exactamente eso:
+
+* `has_output_text: false`
+* `has_output: true`
+* `output: [ [Object], [Object] ]`
+
+O sea: **hay respuesta, pero no en `output_text`**.
+
+## Qué está pasando
+
+Tu normalizador seguramente hace algo parecido a esto:
+
+```js
+const text = response.output_text || "";
+```
+
+y luego concluye que la respuesta está vacía.
+
+Pero en Responses API la salida real suele venir dentro de `response.output`, por ejemplo en items tipo:
+
+* `reasoning`
+* `message`
+* `function_call`
+* otros tipos
+
+La propia referencia indica que no debes asumir que el primer elemento de `output` será siempre el mensaje final, y que `output_text` solo agrega texto de items `output_text` cuando existen. ([Plataforma OpenAI][1])
+
+## Diagnóstico más probable en tu caso
+
+Hay dos posibilidades muy probables:
+
+### 1) El JSON salió dentro de `output` y no lo estás recorriendo
+
+Muy frecuente. El modelo generó el contenido, pero tu logger solo mira `output_text`.
+
+### 2) Estás usando salida estructurada y el SDK no te la deja en `output_text`
+
+Tu prompt exige “únicamente JSON válido”. Si además estás usando `text.format` para JSON estructurado, la respuesta puede venir en forma estructurada dentro de `output`, no necesariamente como string plano agregado en `output_text`. La API permite respuestas de texto o JSON estructurado. ([Plataforma OpenAI][1])
+
+## Qué corregir
+
+### Opción A: extraer texto recorriendo `response.output`
+
+Haz fallback a `output` cuando `output_text` venga vacío.
+
+Ejemplo robusto en Node.js:
+
+```js
+function extractResponseText(resp) {
+  if (resp.output_text && resp.output_text.trim()) {
+    return resp.output_text;
+  }
+
+  const parts = [];
+
+  for (const item of resp.output || []) {
+    if (item.type === "message" && Array.isArray(item.content)) {
+      for (const content of item.content) {
+        if (content.type === "output_text" && typeof content.text === "string") {
+          parts.push(content.text);
+        }
+
+        // por si alguna variante del SDK serializa distinto
+        if (typeof content.text === "string" && !content.type) {
+          parts.push(content.text);
+        }
+
+        // algunas salidas estructuradas pueden venir en otros campos
+        if (content.json) {
+          parts.push(JSON.stringify(content.json));
+        }
+      }
+    }
+  }
+
+  return parts.join("\n").trim();
+}
+```
+
+### Opción B: si quieres JSON fiable, usa salida estructurada de verdad
+
+En vez de pedir “devuelve JSON” solo por prompt, define un esquema JSON con `text.format` y luego lee el resultado parseado según el SDK/método que uses. Así evitas depender de texto libre.
+
+### Opción C: loguea `response.output` real
+
+Ahora mismo tu log oculta justo lo importante con `[Object]`. Necesitas inspeccionarlo completo:
+
+```js
+console.dir(response.output, { depth: null });
+```
+
+o:
+
+```js
+console.log(JSON.stringify(response.output, null, 2));
+```
+
+Sin eso estás ciego.
+
+## Qué revisaría ya en tu código
+
+Busca algo como:
+
+```js
+const text = response.output_text ?? "";
+```
+
+y cámbialo por:
+
+```js
+const text = extractResponseText(response);
+```
+
+y además:
+
+```js
+console.log("output_text:", response.output_text);
+console.log("output:", JSON.stringify(response.output, null, 2));
+```
+
+## Señal importante de tu log
+
+Esto también apunta a que el problema es postproceso, no generación:
+
+* `Prompt ejecutado correctamente`
+* `usage_tokens: 6364`
+* `response_length: 0`
+
+Si el modelo hubiera fallado de verdad, verías `error`, `incomplete_details`, o pocos `output_tokens`. Aquí gastó más de 3000 tokens de salida, así que **algo generó**.
+
+## Conclusión
+
+El fallo es casi seguro este:
+
+**tu pipeline interpreta “`output_text` vacío” como “respuesta vacía”, pero en Responses API la respuesta real está en `output`**. ([Plataforma OpenAI][1])
+
+Pásame el fragmento donde haces la llamada y normalizas `raw_response`, y te lo dejo corregido línea por línea.
+
+[1]: https://platform.openai.com/docs/api-reference/responses/list?ref=test-ippon.ghost.io "Responses | OpenAI API Reference"
+"

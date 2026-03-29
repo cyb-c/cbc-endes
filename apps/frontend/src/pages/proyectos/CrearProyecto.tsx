@@ -36,8 +36,10 @@ export function CrearProyecto() {
     setError(null);
     setSuccess(null);
 
+    const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787'}/api/pai/proyectos`;
+
     // Llamada a API para crear proyecto
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787'}/api/pai/proyectos`, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ijson }),
@@ -166,12 +168,15 @@ export function CrearProyecto() {
             ¿Qué es el IJSON?
           </h3>
           <p className="text-sm text-blue-700 dark:text-blue-400">
-            El IJSON (Inmueble JSON) es el formato de datos que contiene toda la información del anuncio inmobiliario. 
-            Debe incluir al menos: <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">titulo_anuncio</code>,{' '}
-            <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">tipo_inmueble</code>,{' '}
-            <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">precio</code>,{' '}
-            <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">ciudad</code>, y{' '}
-            <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">superficie</code>.
+            El IJSON (Inmueble JSON) es el formato de datos que contiene toda la información del anuncio inmobiliario. La información del inmueble se obtiene desde el Custom GPT:{' '}
+            <a
+              href="https://chatgpt.com/g/g-69af3823839c81919da0d4da6c9233f7-extractor-portales-inmobiliarios"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 hover:underline"
+            >
+              Extractor Portales Inmobiliarios (clic aquí)
+            </a>
           </p>
         </div>
       </div>

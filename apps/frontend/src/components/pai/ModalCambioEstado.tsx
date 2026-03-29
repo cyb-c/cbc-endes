@@ -1,10 +1,16 @@
 /**
  * Componente de modal de cambio de estado para PAI
+ * G61, G62, G63: Corregido para obtener estados desde backend y usar estado_id numérico
  */
 
-import { useState } from 'react';
-import { paiApiClient } from '../../lib/pai-api';
-import type { ProyectoPAI, CambiarEstadoRequest, EstadoProyecto } from '../../types/pai';
+import { useState, useEffect } from 'react';
+import type { ProyectoPAI } from '../../types/pai';
+
+interface EstadoDisponible {
+  VAL_id: number;
+  VAL_nombre: string;
+  VAL_orden: number;
+}
 
 interface ModalCambioEstadoProps {
   proyecto: ProyectoPAI;
@@ -13,76 +19,69 @@ interface ModalCambioEstadoProps {
 }
 
 export function ModalCambioEstado({ proyecto, onEstadoCambiado, onCancel }: ModalCambioEstadoProps) {
-  const [nuevoEstado, setNuevoEstado] = useState(proyecto.estado);
-  const [motivoId, setMotivoId] = useState<number | undefined>(undefined);
-  const [motivoTexto, setMotivoTexto] = useState('');
+  const [nuevoEstadoId, setNuevoEstadoId] = useState<number>(proyecto.estado_id);
+  const [estadosDisponibles, setEstadosDisponibles] = useState<EstadoDisponible[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fetchingEstados, setFetchingEstados] = useState(true);
 
-  const estadosDisponibles: Array<{ value: string; label: string }> = [
-    { value: 'creado', label: 'Creado' },
-    { value: 'procesando_analisis', label: 'En Análisis' },
-    { value: 'analisis_con_error', label: 'Análisis con Error' },
-    { value: 'analisis_finalizado', label: 'Análisis Finalizado' },
-    { value: 'evaluando_viabilidad', label: 'Evaluando Viabilidad' },
-    { value: 'evaluando_plan_negocio', label: 'Evaluando Plan de Negocio' },
-    { value: 'seguimiento_comercial', label: 'Seguimiento Comercial' },
-    { value: 'descartado', label: 'Descartado' },
-  ];
+  // G62: Cargar estados disponibles desde backend
+  useEffect(() => {
+    const cargarEstados = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/pai/estados-disponibles`);
+        const data = await response.json();
+        
+        if (response.ok && data.estados) {
+          setEstadosDisponibles(data.estados);
+        } else {
+          setError('Error al cargar estados disponibles');
+        }
+      } catch (err) {
+        console.error('Error al cargar estados:', err);
+        setError('Error de conexión al cargar estados');
+      } finally {
+        setFetchingEstados(false);
+      }
+    };
 
-  const motivosValoracion = [
-    { id: 1, nombre: 'Buen potencial de inversión' },
-    { id: 2, nombre: 'Ubicación estratégica' },
-    { id: 3, nombre: 'Precio atractivo' },
-    { id: 4, nombre: 'Oportunidad única' },
-    { id: 5, nombre: 'Alta demanda' },
-    { id: 6, nombre: 'Buen estado general' },
-    { id: 7, nombre: 'Otros' },
-  ];
-
-  const motivosDescarte = [
-    { id: 1, nombre: 'Precio demasiado alto' },
-    { id: 2, nombre: 'Ubicación no adecuada' },
-    { id: 3, nombre: 'Estado deficiente' },
-    { id: 4, nombre: 'Dimensiones insuficientes' },
-    { id: 5, nombre: 'Problemas legales' },
-    { id: 6, nombre: 'No cumple requisitos' },
-    { id: 7, nombre: 'Otros' },
-  ];
-
-  const requiereMotivo = nuevoEstado === 'descartado';
-  const motivos = nuevoEstado === 'descartado' ? motivosDescarte : motivosValoracion;
+    cargarEstados();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (requiereMotivo && !motivoId && !motivoTexto.trim()) {
-      setError('Debes seleccionar un motivo o proporcionar una descripción');
-      return;
-    }
 
     setLoading(true);
     setError(null);
 
-    const data: CambiarEstadoRequest = {
-      nuevo_estado: nuevoEstado,
-      motivo_id: motivoId,
-      motivo_texto: motivoTexto.trim() || undefined,
-    };
+    try {
+      // G63: Enviar estado_id numérico al backend
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/pai/proyectos/${proyecto.id}/estado`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          estado_id: nuevoEstadoId,
+        }),
+      });
 
-    const response = await paiApiClient.cambiarEstado(proyecto.id, data);
+      const data = await response.json();
 
-    setLoading(false);
-
-    if (response.success && response.data?.proyecto) {
-      onEstadoCambiado(response.data.proyecto);
-    } else {
-      setError(response.error?.message || 'Error al cambiar estado');
+      if (response.ok && data.proyecto) {
+        onEstadoCambiado(data.proyecto);
+      } else {
+        setError(data.error?.message || 'Error al cambiar estado');
+      }
+    } catch (err) {
+      console.error('Error al cambiar estado:', err);
+      setError('Error de conexión al cambiar estado');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    // G62: Overlay con z-index más alto para cubrir top bar
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100]">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
         <h2 className="text-xl font-bold mb-4">Cambiar Estado del Proyecto</h2>
 
@@ -95,49 +94,23 @@ export function ModalCambioEstado({ proyecto, onEstadoCambiado, onCancel }: Moda
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">Nuevo Estado</label>
-            <select
-              value={nuevoEstado}
-              onChange={(e) => setNuevoEstado(e.target.value as EstadoProyecto)}
-              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-              disabled={loading}
-            >
-              {estadosDisponibles.map((estado) => (
-                <option key={estado.value} value={estado.value}>
-                  {estado.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {requiereMotivo && (
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Motivo</label>
-              
+            {fetchingEstados ? (
+              <div className="text-center py-3 text-gray-500">Cargando estados...</div>
+            ) : (
               <select
-                value={motivoId || ''}
-                onChange={(e) => setMotivoId(e.target.value ? parseInt(e.target.value) : undefined)}
-                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 mb-2"
+                value={nuevoEstadoId}
+                onChange={(e) => setNuevoEstadoId(parseInt(e.target.value))}
+                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 disabled={loading}
               >
-                <option value="">Seleccionar motivo...</option>
-                {motivos.map((motivo) => (
-                  <option key={motivo.id} value={motivo.id}>
-                    {motivo.nombre}
+                {estadosDisponibles.map((estado) => (
+                  <option key={estado.VAL_id} value={estado.VAL_id}>
+                    {estado.VAL_nombre}
                   </option>
                 ))}
               </select>
-
-              <div className="text-sm text-gray-500 mb-2">O proporciona una descripción:</div>
-              
-              <textarea
-                value={motivoTexto}
-                onChange={(e) => setMotivoTexto(e.target.value)}
-                placeholder="Descripción del motivo..."
-                className="w-full h-24 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                disabled={loading}
-              />
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="flex justify-end space-x-2">
             <button
@@ -150,7 +123,7 @@ export function ModalCambioEstado({ proyecto, onEstadoCambiado, onCancel }: Moda
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || fetchingEstados}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
               {loading ? 'Cambiando...' : 'Cambiar Estado'}

@@ -1,5 +1,6 @@
 /**
  * Página de detalle de proyecto PAI
+ * G51, G52, G61: Corregido mapeo, formatos, renderizado y lógica de estado
  */
 
 import { useState, useEffect } from 'react';
@@ -8,7 +9,28 @@ import { useObtenerProyecto, useEjecutarAnalisis, useEliminarProyecto } from '..
 import { ESTADO_PROYECTO_LABELS, ESTADO_PROYECTO_COLORS, type ProyectoPAI } from '../../types/pai';
 import { ListaNotas } from '../../components/pai/ListaNotas';
 import { ModalCambioEstado } from '../../components/pai/ModalCambioEstado';
-import { ResultadosAnalisis } from '../../components/pai/ResultadosAnalisis';
+import { VisualizadorMarkdown } from './VisualizadorMarkdown';
+
+// G51-8: Función para formatear precio en formato español
+function formatPrecio(precio: string): string {
+  if (!precio) return '-';
+  
+  // Eliminar cualquier símbolo de moneda existente
+  const cleanPrice = precio.replace(/[^0-9.,]/g, '');
+  
+  // Intentar parsear como número
+  const num = parseFloat(cleanPrice.replace(',', '.'));
+  
+  if (isNaN(num)) return precio;
+  
+  // Formatear con separador de miles (.) y decimales (,)
+  const formatted = num.toLocaleString('es-ES', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  
+  return `${formatted} €`;
+}
 
 export function DetalleProyecto() {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +38,7 @@ export function DetalleProyecto() {
   const [loading, setLoading] = useState(true);
   const [error, _setError] = useState<string | null>(null);
   const [mostrarModalEstado, setMostrarModalEstado] = useState(false);
+  const [pestañaActiva, setPestañaActiva] = useState<'resumen' | 'datos' | 'otros'>('resumen');
 
   const { obtenerProyecto } = useObtenerProyecto();
   const { ejecutarAnalisis, loading: loadingEjecutar } = useEjecutarAnalisis();
@@ -60,6 +83,9 @@ export function DetalleProyecto() {
     }
   };
 
+  // G61: El botón debe estar deshabilitado si estado_id <= 3
+  const botonCambiarEstadoDeshabilitado = proyecto ? proyecto.estado_id <= 3 : true;
+
   if (loading) return <div className="text-center py-8">Cargando proyecto...</div>;
 
   if (error) return <div className="text-center py-8 text-red-600">{error}</div>;
@@ -79,14 +105,22 @@ export function DetalleProyecto() {
               </span>
             </div>
             <div className="text-sm text-gray-600">
+              {/* G51-1: Fecha de alta formateada como DD/MM/YYYY */}
               <span className="mr-4">CII: <code className="bg-gray-100 px-2 py-1 rounded">{proyecto.cii}</code></span>
-              <span>Creado: {new Date(proyecto.fecha_creacion).toLocaleDateString('es-ES')}</span>
+              <span>Fecha Alta: {proyecto.fecha_creacion ? new Date(proyecto.fecha_creacion).toLocaleDateString('es-ES') : '-'}</span>
             </div>
           </div>
           <div className="flex space-x-2">
+            {/* G61: Botón deshabilitado si estado_id <= 3 */}
             <button
               onClick={() => setMostrarModalEstado(true)}
-              className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm"
+              disabled={botonCambiarEstadoDeshabilitado}
+              className={`px-3 py-2 border rounded-lg text-sm ${
+                botonCambiarEstadoDeshabilitado 
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                  : 'hover:bg-gray-50'
+              }`}
+              title={botonCambiarEstadoDeshabilitado ? 'El cambio de estado no está disponible hasta que el análisis esté finalizado' : ''}
             >
               Cambiar Estado
             </button>
@@ -113,12 +147,18 @@ export function DetalleProyecto() {
       {/* Datos básicos del inmueble */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <h2 className="text-xl font-bold mb-4">Datos Básicos del Inmueble</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* G51-2: Portal con enlace navegable */}
           <div>
             <label className="block text-sm font-medium text-gray-600">Portal</label>
             <div className="mt-1">
               {proyecto.datos_basicos?.portal_url ? (
-                <a href={proyecto.datos_basicos.portal_url} target="_blank" className="text-blue-600 hover:underline">
+                <a 
+                  href={proyecto.datos_basicos.portal_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
                   {proyecto.datos_basicos.portal}
                 </a>
               ) : (
@@ -126,42 +166,136 @@ export function DetalleProyecto() {
               )}
             </div>
           </div>
+          
+          {/* G51-5: Operación informada correctamente */}
           <div>
             <label className="block text-sm font-medium text-gray-600">Operación</label>
-            <div className="mt-1">{proyecto.datos_basicos?.operacion || '-'}</div>
+            <div className="mt-1 capitalize">{proyecto.datos_basicos?.operacion || '-'}</div>
           </div>
+          
           <div>
             <label className="block text-sm font-medium text-gray-600">Tipo de Inmueble</label>
-            <div className="mt-1">{proyecto.datos_basicos?.tipo_inmueble || '-'}</div>
+            <div className="mt-1 capitalize">{proyecto.datos_basicos?.tipo_inmueble || '-'}</div>
           </div>
+          
+          {/* G51-8: Precio formateado en formato español */}
           <div>
             <label className="block text-sm font-medium text-gray-600">Precio</label>
-            <div className="mt-1">{proyecto.datos_basicos?.precio || '-'}</div>
+            <div className="mt-1 font-medium">{formatPrecio(proyecto.datos_basicos?.precio || '')}</div>
           </div>
+          
+          {/* G51-3: Superficie desde PRO_superficie_construida_m2 */}
           <div>
-            <label className="block text-sm font-medium text-gray-600">Superficie</label>
-            <div className="mt-1">{proyecto.datos_basicos?.superficie || '-'}</div>
+            <label className="block text-sm font-medium text-gray-600">Superficie Construida</label>
+            <div className="mt-1">{proyecto.datos_basicos?.superficie_construida_m2 ? `${proyecto.datos_basicos.superficie_construida_m2} m²` : '-'}</div>
           </div>
+          
           <div>
-            <label className="block text-sm font-medium text-gray-600">Ubicación</label>
-            <div className="mt-1">
-              {proyecto.datos_basicos?.ciudad}
-              {proyecto.datos_basicos?.provincia && `, ${proyecto.datos_basicos.provincia}`}
-              {proyecto.datos_basicos?.pais && `, ${proyecto.datos_basicos.pais}`}
-            </div>
+            <label className="block text-sm font-medium text-gray-600">Ciudad</label>
+            <div className="mt-1">{proyecto.datos_basicos?.ciudad || '-'}</div>
           </div>
+          
+          {/* G51-9: Campo "Barrio" agregado */}
           <div>
-            <label className="block text-sm font-medium text-gray-600">Fecha Alta</label>
-            <div className="mt-1">{proyecto.datos_basicos?.fecha_alta ? new Date(proyecto.datos_basicos.fecha_alta).toLocaleDateString('es-ES') : '-'}</div>
+            <label className="block text-sm font-medium text-gray-600">Barrio/Distrito</label>
+            <div className="mt-1">{proyecto.datos_basicos?.barrio || '-'}</div>
+          </div>
+          
+          {/* G51-4: Label cambiado de "Fecha" a "Dirección" */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600">Dirección</label>
+            <div className="mt-1">{proyecto.datos_basicos?.direccion || '-'}</div>
+          </div>
+          
+          {/* G51-1: Fecha de alta formateada */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600">Fecha de Alta</label>
+            <div className="mt-1">{proyecto.fecha_creacion ? new Date(proyecto.fecha_creacion).toLocaleDateString('es-ES') : '-'}</div>
           </div>
         </div>
       </div>
 
-      {/* Resultados del análisis */}
-      <ResultadosAnalisis
-        proyectoId={proyecto.id}
-        artefactos={proyecto.artefactos || []}
-      />
+      {/* G52: Pestañas de Resultados del Análisis */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 className="text-xl font-bold mb-4">Resultados del Análisis</h2>
+        
+        {/* Navegación de pestañas */}
+        <div className="border-b border-gray-200 mb-4">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setPestañaActiva('resumen')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                pestañaActiva === 'resumen'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Resumen Ejecutivo
+            </button>
+            {/* G52: Pestaña "Datos Transformados" agregada */}
+            <button
+              onClick={() => setPestañaActiva('datos')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                pestañaActiva === 'datos'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Datos Transformados
+            </button>
+            <button
+              onClick={() => setPestañaActiva('otros')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                pestañaActiva === 'otros'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Otros Artefactos
+            </button>
+          </nav>
+        </div>
+
+        {/* Contenido de pestañas */}
+        <div className="min-h-[400px]">
+          {/* G51-6, G51-7: Pestaña "Resumen Ejecutivo" con contenido Markdown renderizado */}
+          {pestañaActiva === 'resumen' && (
+            <div>
+              {proyecto.resumen_ejecutivo ? (
+                <VisualizadorMarkdown contenido={proyecto.resumen_ejecutivo} />
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  No hay resumen ejecutivo disponible. Ejecuta el análisis para generarlo.
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* G52: Pestaña "Datos Transformados" con JSON embellecido */}
+          {pestañaActiva === 'datos' && (
+            <div>
+              {proyecto.ijson ? (
+                <div className="bg-gray-50 rounded-lg p-4 overflow-auto max-h-[600px]">
+                  <pre className="text-sm font-mono text-gray-800">
+                    {JSON.stringify(JSON.parse(proyecto.ijson), null, 2)}
+                  </pre>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  No hay datos transformados disponibles. El IJSON no está disponible para este proyecto.
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Otros artefactos */}
+          {pestañaActiva === 'otros' && (
+            <div className="text-center py-12 text-gray-500">
+              Otros artefactos del análisis. Esta funcionalidad está en desarrollo.
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Notas */}
       <ListaNotas

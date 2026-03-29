@@ -25,13 +25,11 @@ type AppBindings = {
 const app = new Hono<{ Bindings: AppBindings }>();
 
 // CORS middleware
-// Actualizado: 2026-03-28 - Fase P1 Corrección CORS
+// Actualizado: 2026-03-29 - G71 Registrar solo URL de producción
 app.use('/api/*', cors({
   origin: [
-    'http://localhost:5173',
-    'https://pg-cbc-endes.pages.dev',
-    'https://56dcde34.pg-cbc-endes.pages.dev',
-    'https://388b71e5.pg-cbc-endes.pages.dev'
+    'http://localhost:5173', // Desarrollo local
+    'https://pg-cbc-endes.pages.dev' // Producción
   ],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],

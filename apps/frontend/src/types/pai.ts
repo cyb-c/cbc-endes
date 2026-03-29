@@ -14,9 +14,12 @@ export interface DatosBasicosInmueble {
   tipo_inmueble: string;
   precio: string;
   superficie: string;
+  superficie_construida_m2?: string;
   ciudad: string;
   provincia?: string;
   pais?: string;
+  barrio?: string;
+  direccion?: string;
   fecha_alta: string;
   fecha_analisis?: string;
 }
@@ -76,6 +79,9 @@ export interface ProyectoPAI {
   cii: string;
   titulo: string;
   estado: EstadoProyecto;
+  estado_id: number;
+  ijson?: string;
+  resumen_ejecutivo?: string;
   datos_basicos: DatosBasicosInmueble;
   fecha_creacion: string;
   fecha_actualizacion?: string;

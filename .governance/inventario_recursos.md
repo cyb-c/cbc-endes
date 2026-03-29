@@ -1,9 +1,9 @@
 # Inventario de Recursos y Configuración
 
 > **Finalidad:** Fuente única de verdad para recursos Cloudflare, CI/CD, bindings, variables de entorno y configuración operativa del proyecto.
-> **Versión:** 11.0
+> **Versión:** 16.0
 > **Importante:** Este archivo es gestionado exclusivamente por el agente `inventariador`. Las modificaciones directas serán rechazadas.
-> **Última actualización:** 2026-03-28 (FASE 4: Integración y Pruebas - COMPLETADA)
+> **Última actualización:** 2026-03-28 (FASE 4: Integración y Pruebas - COMPLETADA + Tracking + OpenAI)
 
 ---
 
@@ -64,7 +64,7 @@
 
 | Variable | Uso | Sensible | Estado |
 |----------|-----|----------|--------|
-| *Por definir* | Variables para integraciones externas (IA) | Sí | 🔲 |
+| `OPENAI_API_KEY` | API Key para OpenAI (IA) | Sí | ✅ Configurado en KV `secretos-cbconsulting` |
 
 ### 3.2. Frontend (`.env`)
 
@@ -72,6 +72,7 @@
 |----------|-----|----------|--------|
 | `VITE_API_BASE_URL` | URL base de la API backend | No | ✅ |
 | `VITE_ENVIRONMENT` | Entorno de ejecución | No | ✅ |
+| `VITE_USE_DYNAMIC_MENU` | Activar menú dinámico | No | ✅ |
 
 > **Nota:** Usar `.dev.vars.example` y `.env.example` como plantillas versionadas sin valores reales.
 
@@ -83,7 +84,7 @@
 
 | Nombre | Binding | App/Proyecto | Puerto Dev | Estado CF | URL Producción | Último Deploy | Notas |
 |--------|---------|--------------|------------|-----------|----------------|---------------|-------|
-| `wk-backend` | `db_binding_01, r2_binding_01` | Backend API (dev) | 8787 | ✅ | https://wk-backend-dev.cbconsulting.workers.dev | 2026-03-28 | FASE 4 COMPLETADA: 10 endpoints PAI operativos, servicio simulación IA funcional, correcciones SQL aplicadas (PRO_ijson, ART_nombre, nombres de columnas), pruebas E2E 100% aprobadas |
+| `wk-backend` | `db_binding_01, r2_binding_01, secrets_kv` | Backend API (dev) | 8787 | ✅ | https://wk-backend-dev.cbconsulting.workers.dev | 2026-03-28 | FASE 4 COMPLETADA + IA DESPLEGADA: 10 endpoints PAI operativos, integración OpenAI activa (KV + R2 prompts), servicio creación proyectos con IA funcional, correcciones SQL aplicadas, pruebas E2E 100% aprobadas |
 | `worker-cbc-endes-dev` | N/A | Backend API (dev) | 8787 | ❌ Eliminado | - | 2026-03-26 | Recurso de prueba eliminado |
 
 **Nota:** El Worker `wk-backend` está activo y proporciona endpoints para el menú dinámico y PAI. El Worker de prueba `worker-cbc-endes-dev` fue eliminado el 2026-03-27.
@@ -92,7 +93,10 @@
 
 | Nombre en CF | ID | Binding | App | Estado |
 |--------------|----|---------|-----|--------|
-| *Sin KV configurado* | - | - | - | - |
+| `secretos-cbconsulting` | `50eb21ab606d4fd5a409e532347cf686` | `secrets_kv` | `wk-backend` | ✅ Creado (secret `OPENAI_API_KEY` configurado) |
+
+**Secrets configurados:**
+- `OPENAI_API_KEY` - API Key para OpenAI Responses API
 
 ### 4.3 Bases de Datos (D1)
 
@@ -123,10 +127,21 @@
 
 | Nombre | Binding | App | Estado | Notas |
 |--------|---------|-----|--------|-------|
-| `r2-cbconsulting` | `r2_binding_01` | `wk-backend` | ✅ | Bucket R2 para almacenamiento de archivos del proyecto PAI |
+| `r2-cbconsulting` | `r2_binding_01` | `wk-backend` | ✅ | Bucket R2 para almacenamiento de archivos PAI y prompts de IA |
 | `cbc-endes-storage-test` | BUCKET | worker-cbc-endes | ❌ Eliminado | Recurso de prueba eliminado |
 
-**Nota:** El bucket R2 de prueba fue eliminado el 2026-03-27. El bucket `r2-cbconsulting` está activo para almacenamiento de archivos PAI.
+**Estructura de carpetas:**
+```
+r2-cbconsulting/
+├── analisis-inmuebles/{CII}/
+│   ├── {CII}.json (IJSON original)
+│   ├── {CII}_*.md (Artefactos Markdown: resumen-ejecutivo, datos-transformados, etc.)
+│   └── {CII}_log.json (Tracking log completo)
+└── prompts-ia/
+    └── 00_CrearProyecto.json (Prompt template para OpenAI Responses API)
+```
+
+**Nota:** El bucket R2 de prueba fue eliminado el 2026-03-27. El bucket `r2-cbconsulting` está activo para almacenamiento de archivos PAI y prompts de IA.
 
 ### 4.5 Queues
 
@@ -243,9 +258,10 @@
 
 | Servicio | Propósito | Variables Requeridas | Estado |
 |----------|-----------|---------------------|--------|
-| *Por definir* | Inferencia IA (OpenAI, Anthropic, etc.) | `OPENAI_API_KEY` o `ANTHROPIC_API_KEY` | 🔲 |
+| **OpenAI Responses API** | Inferencia IA para extracción de datos y generación de resúmenes | `OPENAI_API_KEY` (en KV `secretos-cbconsulting`) | ✅ Implementada (FASE 4) |
+| *Anthropic, etc.* | Proveedores alternativos de IA | `ANTHROPIC_API_KEY` | 🔲 Pendiente |
 
-**Nota:** Las integraciones con IA se definirán en Fase 2.
+**Nota:** La integración con OpenAI está implementada y operativa desde FASE 4. El prompt template está almacenado en R2 (`prompts-ia/00_CrearProyecto.json`).
 
 ---
 
@@ -372,11 +388,26 @@ wrangler secret put [SECRET_NAME] --env dev
 | `apps/frontend/.env.example` | Plantilla variables frontend | ✅ |
 | `.gitignore` | Exclusiones de versionado | ✅ |
 
+**Archivos de Librería Backend (FASE 4):**
+
+| Archivo | Finalidad | Estado |
+|---------|-----------|--------|
+| `apps/worker/src/lib/openai-client.ts` | Cliente reutilizable para OpenAI Responses API | ✅ (FASE 4) |
+| `apps/worker/src/lib/tracking.ts` | Sistema de tracking y generación de log.json | ✅ (FASE 4) |
+| `apps/worker/src/services/ia-creacion-proyectos.ts` | Servicio de creación de proyectos con IA | ✅ (FASE 4) |
+
 **Archivos de Documentación Backend:**
 
 | Archivo | Finalidad | Estado |
 |---------|-----------|--------|
 | `apps/worker/docs/PAI_ERROR_HANDLING.md` | Estrategia de manejo de errores para endpoints PAI | ✅ (FASE 2 P2.3) |
+
+**Archivos de Documentación Técnica (FASE 4):**
+
+| Archivo | Finalidad | Estado |
+|---------|-----------|--------|
+| `plans/proyecto-PIA/doc-base/integracion-openai-api.md` | Documentación completa de integración con OpenAI | ✅ (FASE 4) |
+| `plans/proyecto-PIA/doc-base/tracking-workflow.md` | Documentación del sistema de tracking | ✅ (FASE 4) |
 
 **Archivos de Componentes Frontend PAI:**
 
@@ -401,13 +432,17 @@ wrangler secret put [SECRET_NAME] --env dev
 
 | Elemento | Tipo | Observaciones | Responsable |
 |----------|------|---------------|-------------|
-| Error endpoint cambio de estado | Backend | Endpoint `/api/pai/proyectos/:id/estado` retorna "Error interno del servidor" | Pendiente de investigación |
-| Migración 005 | Base de Datos | Requiere re-ejecución en producción con datos corregidos | Pendiente de corrección |
-| R2 Bucket definitivo | Recurso | Definir nombre y configuración de acceso | Usuario (Fase 2) |
+| Migración 005 | Base de Datos | Requiere re-ejecución en producción con datos corregidos (INSERT OR IGNORE) | Pendiente de corrección |
 | Workflows | Recurso | Orquestación de prompts contra IA | Usuario (Fase 2) |
-| Integraciones externas | API | OpenAI, Anthropic u otros proveedores | Usuario (Fase 2) |
 | Autenticación de usuarios | Auth | No requerido para MVP | Usuario (Fase 3) |
 | CI/CD con GitHub Actions | Pipeline | No requerido según usuario | Usuario (opcional) |
+
+**RESUELTOS en FASE 4:**
+- ✅ ~~Error endpoint cambio de estado~~ - Endpoint funcional post-correcciones
+- ✅ ~~Columna PRO_ijson faltante~~ - Agregada en migración 009
+- ✅ ~~Valor ACTIVO para TIPO_NOTA~~ - Agregado en migración 005 corregida
+- ✅ ~~R2 Bucket definitivo~~ - Usando `r2-cbconsulting` con estructura documentada
+- ✅ ~~Integraciones externas~~ - OpenAI Responses API implementada y operativa
 
 > **Nota:** El Worker backend (`wk-backend`) y la D1 Database (`db-cbconsulting`) están desplegados y activos. Los vacíos de columna PRO_ijson y valor ACTIVO para TIPO_NOTA fueron **RESUELTOS** en FASE 2 P0.1.
 
@@ -417,6 +452,11 @@ wrangler secret put [SECRET_NAME] --env dev
 
 | Fecha | Cambio | Responsable | Aprobado Por |
 |-------|--------|-------------|--------------|
+| 2026-03-28 | Actualización v16.0 - Inventario actualizado con integración OpenAI completa: librerías (openai-client.ts, tracking.ts, ia-creacion-proyectos.ts), documentación técnica (integracion-openai-api.md, tracking-workflow.md), estructura R2 detallada, endpoints documentados | inventariador | Pendiente aprobación usuario |
+| 2026-03-28 | Actualización v15.0 - Documentación técnica creada: integracion-openai-api.md, tracking-workflow.md en `plans/proyecto-PIA/doc-base/` | inventariador | Pendiente aprobación usuario |
+| 2026-03-28 | Actualización v14.0 - Sistema de tracking implementado: tracking.ts, log.json en R2, wrangler tail operativo | inventariador | Pendiente aprobación usuario |
+| 2026-03-28 | Actualización v13.0 - Integración OpenAI DESPLEGADA: KV ID confirmado, worker deployado con IA, prompt en R2 operativo | inventariador | Pendiente aprobación usuario |
+| 2026-03-28 | Actualización v12.0 - Integración OpenAI: KV `secretos-cbconsulting` con `OPENAI_API_KEY`, prompts en R2 `prompts-ia/` | inventariador | Pendiente aprobación usuario |
 | 2026-03-28 | Actualización v11.0 - FASE 4 COMPLETADA: Correcciones P0 (PRO_ijson, ACTIVO, SQL), P1 (reportes), P2 (i18n multiidioma en-US), Pruebas E2E 100% aprobadas | inventariador | Pendiente aprobación usuario |
 | 2026-03-28 | Actualización v10.0 - FASE 2 P0/P1 y FASE 3 P0/P1 completadas (correcciones críticas e importantes) | inventariador | Pendiente aprobación usuario |
 | 2026-03-28 | Actualización v9.0 - FASE 4: Integración y Pruebas completada (i18n, .env.production, Migraciones 007/008, Despliegue Pages, Pruebas E2E) | inventariador | Pendiente aprobación usuario |
@@ -432,13 +472,14 @@ wrangler secret put [SECRET_NAME] --env dev
 
 | Recurso | Nombre | Estado | Notas |
 |---------|--------|--------|-------|
-| Worker | `wk-backend` | ✅ Activo | FASE 4 COMPLETADA: 10 endpoints PAI operativos, timeout 30s, reintentos con backoff, correcciones SQL aplicadas, migraciones 005/009/010 funcionales |
+| Worker | `wk-backend` | ✅ Activo | FASE 4 COMPLETADA + IA + Tracking: 10 endpoints PAI operativos, integración OpenAI activa (KV + R2 prompts), servicio creación proyectos con IA funcional, sistema de tracking con log.json en R2, wrangler tail operativo, correcciones SQL aplicadas, migraciones 005/009/010 funcionales |
 | Worker | `worker-cbc-endes-dev` | ❌ Eliminado | Recurso de prueba temporal |
 | Pages | `pg-cbc-endes` | ✅ Activo | FASE 4 COMPLETADA: i18n multiidioma (es-ES por defecto, en-US disponible), módulo PAI integrado, paginación UI, 9 pestañas de análisis, visualizador Markdown |
 | D1 Database | `db-cbconsulting` | ✅ Activo | FASE 4 COMPLETADA: Tablas PAI con columnas PRO_ijson y PRO_fecha_ultima_actualizacion operativas, valor ACTIVO para TIPO_NOTA agregado, NOT_estado_val_id nullable |
 | D1 Database | `cbc-endes-db-test` | ❌ Eliminado | Recurso de prueba temporal |
-| R2 Bucket | `r2-cbconsulting` | ✅ Activo | Bucket R2 para almacenamiento de archivos PAI |
+| R2 Bucket | `r2-cbconsulting` | ✅ Activo | FASE 4 COMPLETADA: Bucket R2 para almacenamiento de archivos PAI, prompts de IA (`prompts-ia/`), y logs de tracking (`{CII}_log.json`) |
 | R2 Bucket | `cbc-endes-storage-test` | ❌ Eliminado | Recurso de prueba temporal |
+| KV Namespace | `secretos-cbconsulting` | ✅ Activo | FASE 4 COMPLETADA: KV namespace para `OPENAI_API_KEY` (ID: `50eb21ab606d4fd5a409e532347cf686`) |
 
 ---
 
@@ -491,7 +532,29 @@ wrangler secret put [SECRET_NAME] --env dev
    - Archivos: `apps/frontend/src/i18n/es-ES.ts`, `apps/frontend/src/i18n/en-US.ts`
    - Contexto: `apps/frontend/src/context/LocaleContext.tsx`
    - Función de traducción: `t(key, locale?)` con soporte de locale opcional
+8. **Integración con OpenAI:**
+   - KV namespace: `secretos-cbconsulting`
+   - Secret: `OPENAI_API_KEY` (acceso runtime desde Worker)
+   - Prompts almacenados en R2: `r2-cbconsulting/prompts-ia/`
+   - Prompt principal: `00_CrearProyecto.json` (Responses API format)
+   - Modelo: Definido dentro de cada prompt JSON (no requiere variable OPENAI_MODEL)
+   - Librerías: `apps/worker/src/lib/openai-client.ts`, `apps/worker/src/services/ia-creacion-proyectos.ts`
+   
+9. **Sistema de Tracking:**
+   - Librería: `apps/worker/src/lib/tracking.ts`
+   - log.json almacenado en R2: `analisis-inmuebles/{CII}/{CII}_log.json`
+   - Wrangler tail: Disponible para debugging en tiempo real
+   - Documentación: `plans/proyecto-PIA/doc-base/tracking-workflow.md`
 
 ---
 
-> **Nota:** Este inventario refleja el estado actual del proyecto tras la finalización COMPLETA de FASE 4 (Integración y Pruebas). Los recursos activos incluyen el Worker backend (`wk-backend`) con 10 endpoints PAI operativos y correcciones SQL aplicadas, la D1 Database (`db-cbconsulting`) con tablas PAI completamente funcionales (columna PRO_ijson operativa, valor ACTIVO para TIPO_NOTA agregado, NOT_estado_val_id nullable), el bucket R2 (`r2-cbconsulting`) para almacenamiento de artefactos, y el proyecto Pages (`pg-cbc-endes`) con frontend desplegado en producción (https://388b71e5.pg-cbc-endes.pages.dev) con i18n multiidioma implementado (es-ES por defecto, en-US disponible). **Todas las pruebas E2E son aprobables (100% cobertura).**
+> **Nota:** Este inventario refleja el estado actual del proyecto tras la finalización COMPLETA de FASE 4 (Integración y Pruebas) con integración OpenAI DESPLEGADA y sistema de tracking operativo. Los recursos activos incluyen el Worker backend (`wk-backend`) con 10 endpoints PAI operativos, integración OpenAI activa (KV `secretos-cbconsulting` con ID confirmado, prompts en R2 `prompts-ia/`), servicio de creación de proyectos con IA (`ia-creacion-proyectos.ts`), sistema de tracking con log.json en R2 (`tracking.ts`), wrangler tail operativo para debugging, correcciones SQL aplicadas, la D1 Database (`db-cbconsulting`) con tablas PAI completamente funcionales (columna PRO_ijson operativa, valor ACTIVO para TIPO_NOTA agregado, NOT_estado_val_id nullable, PRO_resumen_ejecutivo operativo), el bucket R2 (`r2-cbconsulting`) para almacenamiento de artefactos, prompts de IA y logs de tracking, y el proyecto Pages (`pg-cbc-endes`) con frontend desplegado en producción (https://388b71e5.pg-cbc-endes.pages.dev) con i18n multiidioma implementado (es-ES por defecto, en-US disponible). **Todas las pruebas E2E son aprobables (100% cobertura). La creación de proyectos con IA está operativa. El tracking genera log.json en R2 para cada proyecto.**
+
+---
+
+## Notas de Mantenimiento (Continuación)
+
+10. **Documentación Técnica FASE 4:**
+    - `plans/proyecto-PIA/doc-base/integracion-openai-api.md` - Documentación completa de integración con OpenAI
+    - `plans/proyecto-PIA/doc-base/tracking-workflow.md` - Documentación del sistema de tracking
+    - `temp/faltantes-inventario-recursos.md` - Lista de faltantes para actualización del inventario
