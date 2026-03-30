@@ -12,10 +12,14 @@ import {
   handleObtenerHistorial,
   handleObtenerEstadosDisponibles,
   handleObtenerContenidoArtefacto,
+  handleObtenerContenidoArtefactoPorTipo,
+  handleObtenerMotivosValoracion,
+  handleObtenerMotivosDescarte,
 } from './handlers/pai-proyectos';
 import {
   handleCrearNota,
   handleEditarNota,
+  handleEliminarNota,
 } from './handlers/pai-notas';
 
 type AppBindings = {
@@ -90,8 +94,14 @@ app.get('/api/pai/proyectos/:id/pipeline', handleObtenerHistorial);
 // Obtener estados disponibles para cambio
 app.get('/api/pai/estados-disponibles', handleObtenerEstadosDisponibles);
 
-// Obtener contenido de artefacto
-app.get('/api/pai/proyectos/:id/artefactos/:artefactoId/contenido', handleObtenerContenidoArtefacto);
+// Obtener contenido de artefacto por tipo (Sprint 3 Corrección)
+app.get('/api/pai/proyectos/:id/artefactos/:tipo/contenido', handleObtenerContenidoArtefactoPorTipo);
+
+// Obtener motivos de valoración
+app.get('/api/pai/motivos-valoracion', handleObtenerMotivosValoracion);
+
+// Obtener motivos de descarte
+app.get('/api/pai/motivos-descarte', handleObtenerMotivosDescarte);
 
 // ============================================================================
 // PAI Notas Endpoints
@@ -102,6 +112,9 @@ app.post('/api/pai/proyectos/:id/notas', handleCrearNota);
 
 // Editar nota
 app.put('/api/pai/proyectos/:id/notas/:notaId', handleEditarNota);
+
+// Eliminar nota - Sprint 2 Día 4
+app.delete('/api/pai/proyectos/:id/notas/:notaId', handleEliminarNota);
 
 export default app;
 

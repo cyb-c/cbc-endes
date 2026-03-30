@@ -37,8 +37,20 @@ async function getVALNombre(db: D1Database, valId: number): Promise<string | nul
     .prepare('SELECT VAL_nombre FROM PAI_VAL_valores WHERE VAL_id = ?')
     .bind(valId)
     .first()
-  
+
   return result ? (result.VAL_nombre as string) : null
+}
+
+/**
+ * Obtiene el VAL_codigo para un VAL_id dado (para usar como key en frontend)
+ */
+async function getVALCodigo(db: D1Database, valId: number): Promise<string | null> {
+  const result = await db
+    .prepare('SELECT VAL_codigo FROM PAI_VAL_valores WHERE VAL_id = ?')
+    .bind(valId)
+    .first()
+
+  return result ? (result.VAL_codigo as string) : null
 }
 
 /**
@@ -276,20 +288,21 @@ export async function handleCrearProyecto(c: AppContext): Promise<Response> {
 
 export async function handleObtenerProyecto(c: AppContext): Promise<Response> {
   const db = getDB(c.env)
+  const r2Bucket = getR2Bucket(c.env)
   const idParam = c.req.param('id')
-  
+
   if (!idParam) {
     return c.json({ error: 'ID de proyecto inválido' }, 400)
   }
-  
+
   const proyectoId = parseInt(idParam)
-  
+
   if (isNaN(proyectoId)) {
     return c.json({ error: 'ID de proyecto inválido' }, 400)
   }
-  
+
   try {
-    // Obtener proyecto
+    // Obtener proyecto con estado (JOIN con PAI_VAL_valores para obtener VAL_codigo)
     const proyecto = await db
       .prepare(`
         SELECT
@@ -297,6 +310,7 @@ export async function handleObtenerProyecto(c: AppContext): Promise<Response> {
           p.PRO_cii as cii,
           p.PRO_titulo as titulo,
           p.PRO_estado_val_id as estado_id,
+          e.VAL_codigo as estado,
           p.PRO_motivo_val_id as motivo_valoracion_id,
           p.PRO_portal_nombre as portal,
           p.PRO_portal_url as url_fuente,
@@ -313,17 +327,55 @@ export async function handleObtenerProyecto(c: AppContext): Promise<Response> {
           p.PRO_resumen_ejecutivo as resumen_ejecutivo,
           p.PRO_ijson as ijson
         FROM PAI_PRO_proyectos p
+        LEFT JOIN PAI_VAL_valores e ON p.PRO_estado_val_id = e.VAL_id
         WHERE p.PRO_id = ?
       `)
       .bind(proyectoId)
       .first()
-    
+
     if (!proyecto) {
       return c.json({ error: 'Proyecto no encontrado' }, 404)
     }
+
+    // Sprint 3 Corrección: Verificar si el análisis está completo y actualizar estado
+    let estado = proyecto.estado as string;
+    let estado_id = proyecto.estado_id as number;
     
-    const estadoNombre = await getVALNombre(db, proyecto.estado_id as number)
-    
+    // Solo verificar si estado es 1 (CREADO) o 2 (PROCESANDO_ANALISIS)
+    if (estado_id === 1 || estado_id === 2) {
+      const cii = proyecto.cii as string;
+      const archivoPropietario = `analisis-inmuebles/${cii}/${cii}_07_propietario.md`;
+      
+      try {
+        const r2Object = await r2Bucket.get(archivoPropietario);
+        
+        // Si el archivo existe, actualizar estado a 4 (ANÁLISIS_FINALIZADO)
+        if (r2Object) {
+          await db
+            .prepare(`
+              UPDATE PAI_PRO_proyectos
+              SET PRO_estado_val_id = 4,
+                  PRO_fecha_ultima_actualizacion = ?
+              WHERE PRO_id = ? AND PRO_estado_val_id IN (1, 2)
+            `)
+            .bind(new Date().toISOString(), proyectoId)
+            .run();
+          
+          // Obtener el nuevo estado
+          const nuevoEstado = await db
+            .prepare('SELECT VAL_codigo FROM PAI_VAL_valores WHERE VAL_id = 4')
+            .bind()
+            .first();
+          
+          estado = (nuevoEstado?.VAL_codigo as string) || 'analisis_finalizado';
+          estado_id = 4;
+          console.log(`Proyecto ${proyectoId}: Estado actualizado a ANÁLISIS_FINALIZADO (archivo ${archivoPropietario} encontrado)`);
+        }
+      } catch (error) {
+        console.error(`Error verificando archivo R2 para proyecto ${proyectoId}:`, error);
+      }
+    }
+
     // Obtener artefactos
     const artefactosResult = await db
       .prepare(`
@@ -344,10 +396,11 @@ export async function handleObtenerProyecto(c: AppContext): Promise<Response> {
     // Obtener notas
     const notasResult = await db
       .prepare(`
-        SELECT 
+        SELECT
           n.NOT_id as id,
           n.NOT_tipo_val_id as tipo_nota_id,
           v.VAL_nombre as tipo,
+          n.NOT_asunto as asunto,
           n.NOT_usuario_alta as autor,
           n.NOT_nota as contenido,
           n.NOT_fecha_alta as fecha_creacion
@@ -362,7 +415,7 @@ export async function handleObtenerProyecto(c: AppContext): Promise<Response> {
     return c.json({
       proyecto: {
         ...proyecto,
-        estado: estadoNombre || 'Desconocido',
+        estado: (estado || 'creado').toLowerCase(),
         resumen_ejecutivo: proyecto.resumen_ejecutivo as string | null,
         ijson: proyecto.ijson as string | null,
         datos_basicos: {
@@ -698,9 +751,9 @@ export async function handleCambiarEstado(c: AppContext): Promise<Response> {
   }
 
   try {
-    // G63: Corregido para aceptar estado_id numérico directamente
-    const body = await c.req.json<{ estado_id: number; motivo_valoracion_id?: number; motivo_descarte_id?: number }>()
-    const { estado_id, motivo_valoracion_id, motivo_descarte_id } = body
+    // G63: Corregido - solo usar PRO_motivo_val_id (no existe PRO_motivo_descarte_id en la tabla)
+    const body = await c.req.json<{ estado_id: number; motivo_id?: number }>()
+    const { estado_id, motivo_id } = body
 
     // Validar que estado_id sea numérico y válido
     if (!estado_id || typeof estado_id !== 'number') {
@@ -724,17 +777,16 @@ export async function handleCambiarEstado(c: AppContext): Promise<Response> {
       return c.json({ error: 'Proyecto no encontrado' }, 404)
     }
 
-    // Actualizar estado
+    // Actualizar estado (solo PRO_motivo_val_id, no existe PRO_motivo_descarte_id)
     await db
       .prepare(`
         UPDATE PAI_PRO_proyectos
         SET PRO_estado_val_id = ?,
             PRO_motivo_val_id = ?,
-            PRO_motivo_descarte_id = ?,
             PRO_fecha_ultima_actualizacion = ?
         WHERE PRO_id = ?
       `)
-      .bind(estado_id, motivo_valoracion_id || null, motivo_descarte_id || null, new Date().toISOString(), proyectoId)
+      .bind(estado_id, motivo_id || null, new Date().toISOString(), proyectoId)
       .run()
 
     // Registrar evento de pipeline
@@ -746,21 +798,82 @@ export async function handleCambiarEstado(c: AppContext): Promise<Response> {
       detalle: `Estado cambiado a ${estado_id}`,
     })
 
-    const estadoNombre = await getVALNombre(db, estado_id)
+    const estadoCodigo = await getVALCodigo(db, estado_id)
 
     return c.json({
       proyecto: {
         id: proyecto.id as number,
         cii: proyecto.cii as string,
         estado_id,
-        estado: estadoNombre || 'Desconocido',
-        motivo_valoracion_id: motivo_valoracion_id || null,
-        motivo_descarte_id: motivo_descarte_id || null,
+        estado: (estadoCodigo || 'creado').toLowerCase(),
+        motivo_valoracion_id: motivo_id || null,
         fecha_ultima_actualizacion: new Date().toISOString(),
       },
     })
   } catch (error) {
     console.error('Error al cambiar estado:', error)
+    return c.json({ error: 'Error interno del servidor' }, 500)
+  }
+}
+
+// ============================================================================
+// GET /api/pai/motivos-valoracion - Obtener Motivos de Valoración
+// ============================================================================
+
+export async function handleObtenerMotivosValoracion(c: AppContext): Promise<Response> {
+  const db = getDB(c.env)
+
+  try {
+    const motivosResult = await db
+      .prepare(`
+        SELECT
+          v.VAL_id,
+          v.VAL_nombre,
+          v.VAL_orden
+        FROM PAI_VAL_valores v
+        JOIN PAI_ATR_atributos a ON v.VAL_atr_id = a.ATR_id
+        WHERE a.ATR_codigo = 'MOTIVO_VALORACION'
+          AND v.VAL_activo = 1
+        ORDER BY v.VAL_orden
+      `)
+      .all()
+
+    return c.json({
+      motivos: motivosResult.results || [],
+    })
+  } catch (error) {
+    console.error('Error al obtener motivos de valoración:', error)
+    return c.json({ error: 'Error interno del servidor' }, 500)
+  }
+}
+
+// ============================================================================
+// GET /api/pai/motivos-descarte - Obtener Motivos de Descarte
+// ============================================================================
+
+export async function handleObtenerMotivosDescarte(c: AppContext): Promise<Response> {
+  const db = getDB(c.env)
+
+  try {
+    const motivosResult = await db
+      .prepare(`
+        SELECT
+          v.VAL_id,
+          v.VAL_nombre,
+          v.VAL_orden
+        FROM PAI_VAL_valores v
+        JOIN PAI_ATR_atributos a ON v.VAL_atr_id = a.ATR_id
+        WHERE a.ATR_codigo = 'MOTIVO_DESCARTE'
+          AND v.VAL_activo = 1
+        ORDER BY v.VAL_orden
+      `)
+      .all()
+
+    return c.json({
+      motivos: motivosResult.results || [],
+    })
+  } catch (error) {
+    console.error('Error al obtener motivos de descarte:', error)
     return c.json({ error: 'Error interno del servidor' }, 500)
   }
 }
@@ -1023,6 +1136,83 @@ export async function handleObtenerContenidoArtefacto(c: AppContext): Promise<Re
 
     return c.json({
       contenido: contenido,
+    })
+  } catch (error) {
+    console.error('Error al obtener contenido del artefacto:', error)
+    return c.json({ error: 'Error interno del servidor' }, 500)
+  }
+}
+
+// ============================================================================
+// GET /api/pai/proyectos/:id/artefactos/:tipo/contenido - Obtener Contenido por Tipo
+// ============================================================================
+// Sprint 3 Corrección: Leer directamente desde R2 usando CII, sin pasar por PAI_ART_artefactos
+
+export async function handleObtenerContenidoArtefactoPorTipo(c: AppContext): Promise<Response> {
+  const db = getDB(c.env)
+  const r2Bucket = getR2Bucket(c.env)
+  const idParam = c.req.param('id')
+  const tipoParam = c.req.param('tipo')
+
+  if (!idParam || !tipoParam) {
+    return c.json({ error: 'IDs inválidos' }, 400)
+  }
+
+  const proyectoId = parseInt(idParam)
+
+  if (isNaN(proyectoId)) {
+    return c.json({ error: 'ID de proyecto inválido' }, 400)
+  }
+
+  try {
+    // Obtener CII del proyecto
+    const proyecto = await db
+      .prepare('SELECT PRO_cii as cii FROM PAI_PRO_proyectos WHERE PRO_id = ?')
+      .bind(proyectoId)
+      .first()
+
+    if (!proyecto) {
+      return c.json({ error: 'Proyecto no encontrado' }, 404)
+    }
+
+    const cii = proyecto.cii as string
+
+    // Mapear tipo a nombre de archivo
+    const archivoMap: Record<string, string> = {
+      'analisis-fisico': `${cii}_01_activo_fisico.md`,
+      'analisis-estrategico': `${cii}_02_activo_estrategico.md`,
+      'analisis-financiero': `${cii}_03_activo_financiero.md`,
+      'analisis-regulatorio': `${cii}_04_activo_regulatorio.md`,
+      'inversor': `${cii}_05_inversor.md`,
+      'emprendedor-operador': `${cii}_06_emprendedor_operador.md`,
+      'propietario': `${cii}_07_propietario.md`,
+    }
+
+    const archivoNombre = archivoMap[tipoParam]
+
+    if (!archivoNombre) {
+      return c.json({ error: `Tipo de artefacto no válido: ${tipoParam}` }, 400)
+    }
+
+    const rutaR2 = `analisis-inmuebles/${cii}/${archivoNombre}`
+
+    // Obtener contenido desde R2
+    const r2Object = await r2Bucket.get(rutaR2)
+
+    if (!r2Object) {
+      return c.json({ 
+        error: 'Contenido no encontrado',
+        detalle: `El archivo ${archivoNombre} no existe en R2. Ejecuta el análisis para generarlo.`
+      }, 404)
+    }
+
+    const contenido = await r2Object.text()
+
+    return c.json({
+      contenido: contenido,
+      tipo: tipoParam,
+      archivo: archivoNombre,
+      ruta_r2: rutaR2,
     })
   } catch (error) {
     console.error('Error al obtener contenido del artefacto:', error)

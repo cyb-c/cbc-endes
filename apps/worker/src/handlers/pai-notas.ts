@@ -128,12 +128,12 @@ export async function handleCrearNota(c: AppContext): Promise<Response> {
 
     const notaId = insertResult.meta.last_row_id
 
-    // Registrar evento de pipeline
+    // Registrar evento de pipeline - Sprint 2 Día 5: PROCESS_COMPLETE para crear nota
     await insertPipelineEvent(db, {
       entityId: `proyecto-${proyectoId}`,
       paso: 'crear_nota',
       nivel: 'INFO',
-      tipoEvento: 'STEP_SUCCESS',
+      tipoEvento: 'PROCESS_COMPLETE',
       detalle: `Nota creada: ${notaId}, estado_proyecto_creacion: ${proyecto.estado_nombre}`,
     })
 
@@ -224,15 +224,15 @@ export async function handleEditarNota(c: AppContext): Promise<Response> {
       .bind(contenido, new Date().toISOString(), notaId)
       .run()
     
-    // Registrar evento de pipeline
+    // Registrar evento de pipeline - Sprint 2 Día 5: PROCESS_COMPLETE para editar nota
     await insertPipelineEvent(db, {
       entityId: `proyecto-${proyectoId}`,
       paso: 'editar_nota',
       nivel: 'INFO',
-      tipoEvento: 'STEP_SUCCESS',
+      tipoEvento: 'PROCESS_COMPLETE',
       detalle: `Nota editada: ${notaId}`,
     })
-    
+
     const tipoNombre = await getVALNombre(db, nota.tipo_nota_id as number)
     
     return c.json({
@@ -248,6 +248,96 @@ export async function handleEditarNota(c: AppContext): Promise<Response> {
     })
   } catch (error) {
     console.error('Error al editar nota:', error)
+    return c.json({ error: 'Error interno del servidor' }, 500)
+  }
+}
+
+// ============================================================================
+// DELETE /api/pai/proyectos/:id/notas/:notaId - Eliminar Nota
+// ============================================================================
+// Sprint 2 Día 4: Validación de eliminación con verificación de editabilidad
+
+export async function handleEliminarNota(c: AppContext): Promise<Response> {
+  const db = getDB(c.env)
+  const idParam = c.req.param('id')
+  const notaIdParam = c.req.param('notaId')
+
+  if (!idParam || !notaIdParam) {
+    return c.json({ error: 'IDs de proyecto o nota inválidos' }, 400)
+  }
+
+  const proyectoId = parseInt(idParam)
+  const notaId = parseInt(notaIdParam)
+
+  if (isNaN(proyectoId) || isNaN(notaId)) {
+    return c.json({ error: 'IDs de proyecto o nota inválidos' }, 400)
+  }
+
+  try {
+    // Obtener nota para verificar editabilidad
+    const nota = await db
+      .prepare(`
+        SELECT
+          n.NOT_id as id,
+          n.NOT_proyecto_id as proyecto_id,
+          n.NOT_fecha_alta as fecha_creacion,
+          n.NOT_estado_val_id as estado_val_id
+        FROM PAI_NOT_notas n
+        WHERE n.NOT_id = ? AND n.NOT_proyecto_id = ?
+      `)
+      .bind(notaId, proyectoId)
+      .first()
+
+    if (!nota) {
+      return c.json({ error: 'Nota no encontrada' }, 404)
+    }
+
+    // Sprint 2 Día 4: Validar si la nota es editable (estado no ha cambiado)
+    const editable = await esNotaEditable(db, proyectoId, nota.fecha_creacion as string)
+
+    if (!editable) {
+      // Registrar evento de error de eliminación
+      await insertPipelineEvent(db, {
+        entityId: `proyecto-${proyectoId}`,
+        paso: 'eliminar_nota',
+        nivel: 'WARNING',
+        tipoEvento: 'STEP_FAILED',
+        detalle: `Intento de eliminar nota no editable: ${notaId}. El estado del proyecto ha cambiado.`,
+      })
+
+      return c.json({ 
+        error: 'La nota no se puede eliminar. El estado del proyecto ha cambiado desde su creación.',
+        error_codigo: 'NOTA_NO_EDITABLE'
+      }, 403)
+    }
+
+    // Eliminar nota
+    await db
+      .prepare(`
+        DELETE FROM PAI_NOT_notas
+        WHERE NOT_id = ? AND NOT_proyecto_id = ?
+      `)
+      .bind(notaId, proyectoId)
+      .run()
+
+    // Registrar evento de pipeline - Sprint 2 Día 5: PROCESS_COMPLETE
+    await insertPipelineEvent(db, {
+      entityId: `proyecto-${proyectoId}`,
+      paso: 'eliminar_nota',
+      nivel: 'INFO',
+      tipoEvento: 'PROCESS_COMPLETE',
+      detalle: `Nota eliminada: ${notaId}`,
+    })
+
+    return c.json({
+      mensaje: 'Nota eliminada correctamente',
+      nota_eliminada: {
+        id: notaId,
+        proyecto_id: proyectoId,
+      },
+    })
+  } catch (error) {
+    console.error('Error al eliminar nota:', error)
     return c.json({ error: 'Error interno del servidor' }, 500)
   }
 }
