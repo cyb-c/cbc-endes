@@ -27,15 +27,24 @@ export function FormularioNota({ proyectoId, onGuardado, onCancel }: FormularioN
   const [contenido, setContenido] = useState('');
   const [tipoNota, setTipoNota] = useState<number>(1); // Default: Comentario
   const [autor, setAutor] = useState(''); // Nombre del autor
+  const [asunto, setAsunto] = useState(''); // Asunto de la nota
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validar contenido
-    if (!contenido.trim()) {
-      setError('El contenido de la nota es obligatorio');
+    // Sprint 2 Día 6: Validaciones de longitud de campos
+    if (!asunto.trim()) {
+      setError('El asunto es obligatorio');
+      return;
+    }
+    if (asunto.trim().length < 3) {
+      setError('El asunto debe tener al menos 3 caracteres');
+      return;
+    }
+    if (asunto.length > 200) {
+      setError('El asunto no puede exceder los 200 caracteres');
       return;
     }
 
@@ -44,15 +53,38 @@ export function FormularioNota({ proyectoId, onGuardado, onCancel }: FormularioN
       setError('El autor es obligatorio');
       return;
     }
+    if (autor.trim().length < 2) {
+      setError('El autor debe tener al menos 2 caracteres');
+      return;
+    }
+    if (autor.length > 100) {
+      setError('El autor no puede exceder los 100 caracteres');
+      return;
+    }
+
+    // Validar contenido
+    if (!contenido.trim()) {
+      setError('El contenido es obligatorio');
+      return;
+    }
+    if (contenido.trim().length < 10) {
+      setError('El contenido debe tener al menos 10 caracteres');
+      return;
+    }
+    if (contenido.length > 5000) {
+      setError('El contenido no puede exceder los 5000 caracteres');
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
-    // G06 Corrección: Enviar todos los campos requeridos
-    const response = await paiApiClient.crearNota(proyectoId, { 
+    // Sprint 1: Enviar todos los campos requeridos incluyendo asunto
+    const response = await paiApiClient.crearNota(proyectoId, {
       tipo_nota_id: tipoNota,
       autor: autor.trim(),
-      contenido 
+      asunto: asunto.trim(),
+      contenido: contenido.trim()
     });
 
     setLoading(false);
@@ -103,6 +135,22 @@ export function FormularioNota({ proyectoId, onGuardado, onCancel }: FormularioN
         />
       </div>
 
+      {/* Campo: Asunto */}
+      <div className="mb-3">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Asunto <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          value={asunto}
+          onChange={(e) => setAsunto(e.target.value)}
+          placeholder="Asunto de la nota"
+          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+          disabled={loading}
+          required
+        />
+      </div>
+
       {/* Campo: Contenido */}
       <div className="mb-3">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -135,7 +183,7 @@ export function FormularioNota({ proyectoId, onGuardado, onCancel }: FormularioN
         </button>
         <button
           type="submit"
-          disabled={loading || !contenido.trim() || !autor.trim()}
+          disabled={loading || !contenido.trim() || !autor.trim() || !asunto.trim()}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
         >
           {loading ? 'Guardando...' : 'Guardar Nota'}

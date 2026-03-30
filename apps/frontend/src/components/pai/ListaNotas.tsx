@@ -7,11 +7,13 @@ import { useState, useEffect } from 'react';
 import { paiApiClient } from '../../lib/pai-api';
 import { useNotaEditable } from '../../hooks/useNotaEditable';
 import { FormularioNota } from './FormularioNota';
+import { FormularioEditarNota } from './FormularioEditarNota';
 import type { Nota } from '../../types/pai';
 
 interface ListaNotasProps {
   proyectoId: number;
   estadoProyecto: string;
+  notasIniciales?: Nota[]; // Notas cargadas desde el padre
   onNotaEditada?: (nota: Nota) => void;
   onNotaEliminada?: (notaId: number) => void;
 }
@@ -21,10 +23,11 @@ interface NotaEditable extends Nota {
   razonNoEditable?: string;
 }
 
-export function ListaNotas({ proyectoId, estadoProyecto, onNotaEditada, onNotaEliminada }: ListaNotasProps) {
-  const [notas, setNotas] = useState<NotaEditable[]>([]);
+export function ListaNotas({ proyectoId, estadoProyecto, notasIniciales, onNotaEditada, onNotaEliminada }: ListaNotasProps) {
+  const [notas, setNotas] = useState<NotaEditable[]>(notasIniciales?.map(n => ({ ...n, esEditable: true })) || []);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [notaEditando, setNotaEditando] = useState<Nota | null>(null);
+  const [loading, setLoading] = useState(notasIniciales === undefined); // Solo loading si no hay notas iniciales
   const [error, setError] = useState<string | null>(null);
 
   // Hook para verificar editabilidad
@@ -33,8 +36,16 @@ export function ListaNotas({ proyectoId, estadoProyecto, onNotaEditada, onNotaEl
   const puedeAgregarNotas = estadoProyecto !== 'descartado';
 
   useEffect(() => {
+    // Si hay notas iniciales, usarlas y no cargar
+    if (notasIniciales !== undefined) {
+      setNotas(notasIniciales.map(n => ({ ...n, esEditable: true })));
+      setLoading(false);
+      return;
+    }
+    
+    // Si no hay notas iniciales, cargar desde API
     cargarNotas();
-  }, [proyectoId]);
+  }, [proyectoId, notasIniciales]);
 
   const cargarNotas = async () => {
     setLoading(true);
@@ -65,6 +76,12 @@ export function ListaNotas({ proyectoId, estadoProyecto, onNotaEditada, onNotaEl
     onNotaEditada?.(nuevaNota);
   };
 
+  const handleNotaEditada = (notaActualizada: Nota) => {
+    setNotas(notas.map(n => n.id === notaActualizada.id ? notaActualizada : n));
+    setNotaEditando(null);
+    onNotaEditada?.(notaActualizada);
+  };
+
   const handleNotaEliminada = async (notaId: number) => {
     if (!confirm('¿Estás seguro de eliminar esta nota?')) return;
 
@@ -74,7 +91,12 @@ export function ListaNotas({ proyectoId, estadoProyecto, onNotaEditada, onNotaEl
       setNotas(notas.filter(n => n.id !== notaId));
       onNotaEliminada?.(notaId);
     } else {
-      alert(response.error?.message || 'Error al eliminar nota');
+      // Sprint 2 Día 4: Manejar error 403 - nota no editable
+      if (response.error?.code === 'NOTA_NO_EDITABLE') {
+        alert(`No se puede eliminar: ${response.error.message}`);
+      } else {
+        alert(response.error?.message || 'Error al eliminar nota');
+      }
     }
   };
 
@@ -107,11 +129,32 @@ export function ListaNotas({ proyectoId, estadoProyecto, onNotaEditada, onNotaEl
               }`}
             >
               <div className="flex justify-between items-start mb-2">
-                <h3 className="font-medium">📝 Nota</h3>
+                <div>
+                  {/* Mostrar tipo y asunto */}
+                  <div className="flex items-center gap-2 mb-1">
+                    {nota.tipo && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                        {nota.tipo}
+                      </span>
+                    )}
+                    {nota.asunto && (
+                      <h3 className="font-medium text-lg">{nota.asunto}</h3>
+                    )}
+                    {!nota.tipo && !nota.asunto && (
+                      <h3 className="font-medium text-lg">📝 Nota</h3>
+                    )}
+                  </div>
+                  {/* Estado del proyecto al crear */}
+                  {nota.estado_proyecto_creacion && (
+                    <span className="text-xs text-gray-500 italic">
+                      Estado al crear: {nota.estado_proyecto_creacion}
+                    </span>
+                  )}
+                </div>
                 {mostrarBotones ? (
                   <div className="space-x-2">
                     <button
-                      onClick={() => setMostrarFormulario(true)}
+                      onClick={() => setNotaEditando(nota)}
                       className="text-blue-600 hover:text-blue-800 text-sm"
                     >
                       Editar
@@ -135,8 +178,8 @@ export function ListaNotas({ proyectoId, estadoProyecto, onNotaEditada, onNotaEl
               </p>
 
               <div className="text-sm text-gray-500">
-                Creado: {new Date(nota.fecha_creacion).toLocaleString('es-ES')}
-                {nota.fecha_actualizacion !== nota.fecha_creacion && (
+                Autor: {nota.autor} • Creado: {new Date(nota.fecha_creacion).toLocaleString('es-ES')}
+                {nota.fecha_actualizacion && nota.fecha_actualizacion !== nota.fecha_creacion && (
                   <span className="ml-2">
                     • Actualizado: {new Date(nota.fecha_actualizacion).toLocaleString('es-ES')}
                   </span>
@@ -153,7 +196,7 @@ export function ListaNotas({ proyectoId, estadoProyecto, onNotaEditada, onNotaEl
         </div>
       )}
 
-      {puedeAgregarNotas && !mostrarFormulario && (
+      {puedeAgregarNotas && !mostrarFormulario && !notaEditando && (
         <button
           onClick={() => setMostrarFormulario(true)}
           className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -162,12 +205,25 @@ export function ListaNotas({ proyectoId, estadoProyecto, onNotaEditada, onNotaEl
         </button>
       )}
 
+      {/* Formulario de creación */}
       {mostrarFormulario && (
         <div className="mt-4 pt-4 border-t">
           <FormularioNota
             proyectoId={proyectoId}
             onGuardado={handleNotaCreada}
             onCancel={() => setMostrarFormulario(false)}
+          />
+        </div>
+      )}
+
+      {/* Formulario de edición */}
+      {notaEditando && (
+        <div className="mt-4 pt-4 border-t">
+          <FormularioEditarNota
+            proyectoId={proyectoId}
+            nota={notaEditando}
+            onGuardado={handleNotaEditada}
+            onCancel={() => setNotaEditando(null)}
           />
         </div>
       )}

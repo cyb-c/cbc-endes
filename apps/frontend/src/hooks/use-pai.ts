@@ -64,7 +64,8 @@ export function useObtenerProyecto() {
       return null;
     }
 
-    return response.data?.proyecto || null;
+    // Devolver proyecto completo con notas y artefactos
+    return response.data || null;
   }, []);
 
   return { obtenerProyecto, loading, error };

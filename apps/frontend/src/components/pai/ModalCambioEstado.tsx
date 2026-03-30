@@ -1,6 +1,7 @@
 /**
  * Componente de modal de cambio de estado para PAI
  * G61, G62, G63: Corregido para obtener estados desde backend y usar estado_id numérico
+ * G64: Añadido campo de motivo (obligatorio para todos los estados)
  */
 
 import { useState, useEffect } from 'react';
@@ -12,6 +13,11 @@ interface EstadoDisponible {
   VAL_orden: number;
 }
 
+interface MotivoDisponible {
+  VAL_id: number;
+  VAL_nombre: string;
+}
+
 interface ModalCambioEstadoProps {
   proyecto: ProyectoPAI;
   onEstadoCambiado: (proyecto: ProyectoPAI) => void;
@@ -20,18 +26,20 @@ interface ModalCambioEstadoProps {
 
 export function ModalCambioEstado({ proyecto, onEstadoCambiado, onCancel }: ModalCambioEstadoProps) {
   const [nuevoEstadoId, setNuevoEstadoId] = useState<number>(proyecto.estado_id);
+  const [motivoId, setMotivoId] = useState<number | ''>('');
   const [estadosDisponibles, setEstadosDisponibles] = useState<EstadoDisponible[]>([]);
+  const [motivosDisponibles, setMotivosDisponibles] = useState<MotivoDisponible[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fetchingEstados, setFetchingEstados] = useState(true);
 
-  // G62: Cargar estados disponibles desde backend
+  // Cargar estados disponibles desde backend
   useEffect(() => {
     const cargarEstados = async () => {
       try {
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/pai/estados-disponibles`);
         const data = await response.json();
-        
+
         if (response.ok && data.estados) {
           setEstadosDisponibles(data.estados);
         } else {
@@ -48,19 +56,59 @@ export function ModalCambioEstado({ proyecto, onEstadoCambiado, onCancel }: Moda
     cargarEstados();
   }, []);
 
+  // Cargar motivos disponibles según el estado seleccionado
+  useEffect(() => {
+    const cargarMotivos = async () => {
+      if (!nuevoEstadoId) return;
+
+      try {
+        // Determinar si es motivo de valoración o descarte según el estado
+        // Estados 4-8 son de valoración, estado 9 es descarte
+        const esDescartado = nuevoEstadoId === 9;
+        const endpoint = esDescartado 
+          ? '/api/pai/motivos-descarte' 
+          : '/api/pai/motivos-valoracion';
+
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}${endpoint}`);
+        const data = await response.json();
+
+        if (response.ok && data.motivos) {
+          setMotivosDisponibles(data.motivos.map((m: any) => ({
+            VAL_id: m.VAL_id,
+            VAL_nombre: m.VAL_nombre,
+          })));
+        } else {
+          setMotivosDisponibles([]);
+        }
+      } catch (err) {
+        console.error('Error al cargar motivos:', err);
+        setMotivosDisponibles([]);
+      }
+    };
+
+    cargarMotivos();
+  }, [nuevoEstadoId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validar que se haya seleccionado un motivo
+    if (!motivoId) {
+      setError('Debe seleccionar un motivo para el cambio de estado');
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      // G63: Enviar estado_id numérico al backend
+      // Enviar estado_id y motivo_id al backend
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/pai/proyectos/${proyecto.id}/estado`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           estado_id: nuevoEstadoId,
+          motivo_id: motivoId,
         }),
       });
 
@@ -80,7 +128,7 @@ export function ModalCambioEstado({ proyecto, onEstadoCambiado, onCancel }: Moda
   };
 
   return (
-    // G62: Overlay con z-index más alto para cubrir top bar
+    // Overlay con z-index más alto para cubrir top bar
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100]">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
         <h2 className="text-xl font-bold mb-4">Cambiar Estado del Proyecto</h2>
@@ -112,6 +160,32 @@ export function ModalCambioEstado({ proyecto, onEstadoCambiado, onCancel }: Moda
             )}
           </div>
 
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-2">
+              Motivo <span className="text-red-500">*</span>
+            </label>
+            {motivosDisponibles.length === 0 ? (
+              <div className="text-center py-3 text-gray-500">
+                {nuevoEstadoId ? 'No hay motivos disponibles' : 'Seleccione un estado primero'}
+              </div>
+            ) : (
+              <select
+                value={motivoId}
+                onChange={(e) => setMotivoId(parseInt(e.target.value))}
+                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                disabled={loading || motivosDisponibles.length === 0}
+                required
+              >
+                <option value="">Seleccione un motivo</option>
+                {motivosDisponibles.map((motivo) => (
+                  <option key={motivo.VAL_id} value={motivo.VAL_id}>
+                    {motivo.VAL_nombre}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
           <div className="flex justify-end space-x-2">
             <button
               type="button"
@@ -123,7 +197,7 @@ export function ModalCambioEstado({ proyecto, onEstadoCambiado, onCancel }: Moda
             </button>
             <button
               type="submit"
-              disabled={loading || fetchingEstados}
+              disabled={loading || fetchingEstados || motivosDisponibles.length === 0}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
               {loading ? 'Cambiando...' : 'Cambiar Estado'}

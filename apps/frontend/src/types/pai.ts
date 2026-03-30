@@ -27,10 +27,17 @@ export interface DatosBasicosInmueble {
 export interface Nota {
   id: number;
   proyecto_id: number;
+  tipo_nota_id: number;
+  tipo: string;
+  asunto: string;  // Asunto/título de la nota
+  estado_proyecto_creacion: string;  // VAL_nombre del estado al crear (clave para editabilidad)
+  autor: string;
   contenido: string;
   fecha_creacion: string;
-  fecha_actualizacion: string;
+  fecha_actualizacion?: string;
   usuario_id?: number;
+  esEditable?: boolean;  // Calculado en frontend basado en cambios de estado
+  razonNoEditable?: string;  // Razón por la que no es editable (si aplica)
 }
 
 export interface Artefacto {
@@ -117,6 +124,7 @@ export interface CambiarEstadoRequest {
 export interface CrearNotaRequest {
   tipo_nota_id: number;
   autor: string;
+  asunto: string;
   contenido: string;
 }
 
@@ -150,6 +158,8 @@ export interface ListarProyectosResponse {
 
 export interface ObtenerProyectoResponse {
   proyecto: ProyectoPAI;
+  artefactos: Artefacto[];
+  notas: Nota[];
 }
 
 export interface CrearProyectoResponse {

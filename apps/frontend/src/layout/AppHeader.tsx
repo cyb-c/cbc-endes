@@ -3,8 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { useSidebar } from "../context/SidebarContext";
 import { ThemeToggleButton } from "../components/common/ThemeToggleButton";
-import NotificationDropdown from "../components/header/NotificationDropdown";
-import UserDropdown from "../components/header/UserDropdown";
+import { CONFIG } from '../config/ui';
+
+// Nota: NotificationDropdown y UserDropdown existen pero están ocultos por configuración
+// Si se quieren mostrar, cambiar CONFIG.ui_visibilidad.notificaciones_icono y usuario_menu a true
+// import NotificationDropdown from "../components/header/NotificationDropdown";
+// import UserDropdown from "../components/header/UserDropdown";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
@@ -84,16 +88,17 @@ const AppHeader: React.FC = () => {
           </button>
 
           <Link to="/" className="lg:hidden">
-            <img
-              className="dark:hidden"
-              src="./images/logo/logo.svg"
-              alt="Logo"
-            />
-            <img
-              className="hidden dark:block"
-              src="./images/logo/logo-dark.svg"
-              alt="Logo"
-            />
+            <div className="flex items-center gap-2">
+              {/* Logo C&B Consulting */}
+              <img
+                src="https://srrhhmx.s-ul.eu/BgmSpQcc"
+                alt="C&B Consulting"
+                className="h-8 w-auto"
+              />
+              <span className="font-semibold text-gray-900 dark:text-white">
+                C&B Consulting
+              </span>
+            </div>
           </Link>
 
           <button
@@ -116,6 +121,8 @@ const AppHeader: React.FC = () => {
             </svg>
           </button>
 
+          {/* Barra de búsqueda - Oculta por configuración (ref 4) */}
+          {CONFIG.ui_visibilidad.busqueda && (
           <div className="hidden lg:block">
             <form>
               <div className="relative">
@@ -150,6 +157,7 @@ const AppHeader: React.FC = () => {
               </div>
             </form>
           </div>
+          )}
         </div>
         <div
           className={`${
@@ -160,11 +168,31 @@ const AppHeader: React.FC = () => {
             {/* <!-- Dark Mode Toggler --> */}
             <ThemeToggleButton />
             {/* <!-- Dark Mode Toggler --> */}
+            
+            {/* Notificaciones - Ocultas por configuración (ref 5, 6) */}
+            {/* {CONFIG.ui_visibilidad.notificaciones_icono && (
             <NotificationDropdown />
+            )} */}
             {/* <!-- Notification Menu Area --> */}
           </div>
-          {/* <!-- User Area --> */}
+          {/* <!-- User Area - Oculto por configuración (ref 7, 8) --> */}
+          {/* {CONFIG.ui_visibilidad.usuario_menu && (
           <UserDropdown />
+          )} */}
+          {/* Usuario - Mostrar cuando usuario_menu es false (ref 7) */}
+          {!CONFIG.ui_visibilidad.usuario_menu && (
+            <div className="flex items-center gap-2">
+              {/* Icono de usuario genérico */}
+              <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                <svg className="w-6 h-6 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+              </div>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {CONFIG.branding.usuario.nombre}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </header>

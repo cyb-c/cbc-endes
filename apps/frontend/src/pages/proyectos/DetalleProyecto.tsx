@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useObtenerProyecto, useEjecutarAnalisis, useEliminarProyecto } from '../../hooks/use-pai';
-import { ESTADO_PROYECTO_LABELS, ESTADO_PROYECTO_COLORS, type ProyectoPAI } from '../../types/pai';
+import { ESTADO_PROYECTO_LABELS, ESTADO_PROYECTO_COLORS, type ProyectoPAI, type Nota } from '../../types/pai';
 import { ListaNotas } from '../../components/pai/ListaNotas';
 import { ModalCambioEstado } from '../../components/pai/ModalCambioEstado';
 import { VisualizadorMarkdown } from './VisualizadorMarkdown';
@@ -55,14 +55,30 @@ function formatFecha(fecha: string | null | undefined): string {
 export function DetalleProyecto() {
   const { id } = useParams<{ id: string }>();
   const [proyecto, setProyecto] = useState<ProyectoPAI | null>(null);
+  const [notas, setNotas] = useState<Nota[]>([]); // ← Notas separadas
   const [loading, setLoading] = useState(true);
   const [error, _setError] = useState<string | null>(null);
   const [mostrarModalEstado, setMostrarModalEstado] = useState(false);
-  const [pestañaActiva, setPestañaActiva] = useState<'resumen' | 'datos' | 'otros'>('resumen');
+  
+  // Sprint 3 Corrección: 9 pestañas (resumen, datos, 7 análisis)
+  const [pestañaActiva, setPestañaActiva] = useState<string>('resumen');
+  const [contenidoAnalisis, setContenidoAnalisis] = useState<Record<string, string>>({});
+  const [loadingAnalisis, setLoadingAnalisis] = useState<Record<string, boolean>>({});
 
   const { obtenerProyecto } = useObtenerProyecto();
   const { ejecutarAnalisis } = useEjecutarAnalisis();
   const { eliminarProyecto, loading: loadingEliminar } = useEliminarProyecto();
+
+  // Tipos de análisis disponibles
+  const tiposAnalisis = [
+    { key: 'analisis-fisico', label: 'Análisis Físico' },
+    { key: 'analisis-estrategico', label: 'Análisis Estratégico' },
+    { key: 'analisis-financiero', label: 'Análisis Financiero' },
+    { key: 'analisis-regulatorio', label: 'Análisis Regulatorio' },
+    { key: 'inversor', label: 'Lectura Inversor' },
+    { key: 'emprendedor-operador', label: 'Lectura Operador' },
+    { key: 'propietario', label: 'Lectura Propietario' },
+  ];
 
   useEffect(() => {
     cargarProyecto();
@@ -72,9 +88,39 @@ export function DetalleProyecto() {
     if (!id) return;
     const data = await obtenerProyecto(parseInt(id));
     if (data) {
-      setProyecto(data);
+      setProyecto(data.proyecto);
+      setNotas(data.notas || []); // ← Guardar notas también
     }
     setLoading(false);
+  };
+
+  // Sprint 3 Corrección: Cargar contenido de análisis desde R2
+  const cargarContenidoAnalisis = async (tipo: string) => {
+    if (contenidoAnalisis[tipo] || loadingAnalisis[tipo]) return;
+
+    setLoadingAnalisis(prev => ({ ...prev, [tipo]: true }));
+
+    try {
+      const url = `${import.meta.env.VITE_API_BASE_URL}/api/pai/proyectos/${id}/artefactos/${tipo}/contenido`;
+      console.log(`Cargando análisis ${tipo}:`, url);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        console.error(`HTTP error ${response.status}: ${response.statusText}`);
+        const errorData = await response.json();
+        console.error('Error details:', errorData);
+        return;
+      }
+      
+      const data = await response.json();
+      console.log(`Contenido cargado para ${tipo}:`, data.contenido?.length, 'chars');
+      setContenidoAnalisis(prev => ({ ...prev, [tipo]: data.contenido }));
+    } catch (error) {
+      console.error(`Error loading análisis ${tipo}:`, error);
+    } finally {
+      setLoadingAnalisis(prev => ({ ...prev, [tipo]: false }));
+    }
   };
 
   const handleEjecutarAnalisis = async (proyectoId: number) => {
@@ -247,47 +293,53 @@ export function DetalleProyecto() {
       {/* G52: Pestañas de Resultados del Análisis */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <h2 className="text-xl font-bold mb-4">Resultados del Análisis</h2>
-        
-        {/* Navegación de pestañas */}
-        <div className="border-b border-gray-200 mb-4">
-          <nav className="-mb-px flex space-x-8">
+
+        {/* Navegación de pestañas - Sprint 3 Corrección: 9 pestañas */}
+        <div className="border-b border-gray-200 mb-4 overflow-x-auto">
+          <nav className="-mb-px flex space-x-4 min-w-max">
             <button
               onClick={() => setPestañaActiva('resumen')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`py-2 px-4 border-b-2 font-medium text-sm whitespace-nowrap ${
                 pestañaActiva === 'resumen'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Resumen Ejecutivo
+              📄 Resumen Ejecutivo
             </button>
-            {/* G52: Pestaña "Datos Transformados" agregada */}
             <button
               onClick={() => setPestañaActiva('datos')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`py-2 px-4 border-b-2 font-medium text-sm whitespace-nowrap ${
                 pestañaActiva === 'datos'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Datos Transformados
+              📊 Datos Transformados
             </button>
-            <button
-              onClick={() => setPestañaActiva('otros')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                pestañaActiva === 'otros'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Otros Artefactos
-            </button>
+            {/* Sprint 3 Corrección: 7 pestañas de análisis */}
+            {tiposAnalisis.map((tipo) => (
+              <button
+                key={tipo.key}
+                onClick={() => {
+                  setPestañaActiva(tipo.key);
+                  cargarContenidoAnalisis(tipo.key);
+                }}
+                className={`py-2 px-4 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  pestañaActiva === tipo.key
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                {tipo.label}
+              </button>
+            ))}
           </nav>
         </div>
 
         {/* Contenido de pestañas */}
         <div className="min-h-[400px]">
-          {/* G51-6, G51-7: Pestaña "Resumen Ejecutivo" con contenido Markdown renderizado */}
+          {/* Pestaña "Resumen Ejecutivo" */}
           {pestañaActiva === 'resumen' && (
             <div>
               {proyecto.resumen_ejecutivo ? (
@@ -299,8 +351,8 @@ export function DetalleProyecto() {
               )}
             </div>
           )}
-          
-          {/* G52: Pestaña "Datos Transformados" con JSON embellecido */}
+
+          {/* Pestaña "Datos Transformados" */}
           {pestañaActiva === 'datos' && (
             <div>
               {proyecto.ijson ? (
@@ -316,11 +368,26 @@ export function DetalleProyecto() {
               )}
             </div>
           )}
-          
-          {/* Otros artefactos */}
-          {pestañaActiva === 'otros' && (
-            <div className="text-center py-12 text-gray-500">
-              Otros artefactos del análisis. Esta funcionalidad está en desarrollo.
+
+          {/* Sprint 3 Corrección: 7 pestañas de análisis desde R2 */}
+          {tiposAnalisis.some(t => t.key === pestañaActiva) && (
+            <div>
+              {loadingAnalisis[pestañaActiva] ? (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <p className="mt-4 text-gray-500">Cargando análisis...</p>
+                </div>
+              ) : contenidoAnalisis[pestañaActiva] ? (
+                <div className="prose prose-blue max-w-none">
+                  <VisualizadorMarkdown contenido={contenidoAnalisis[pestañaActiva]} />
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <p className="mb-4">No hay contenido disponible para este análisis.</p>
+                  <p className="text-sm">Haz clic en la pestaña para intentar cargar el contenido.</p>
+                  <p className="text-xs mt-2">Si el problema persiste, ejecuta el análisis completo del proyecto.</p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -330,6 +397,7 @@ export function DetalleProyecto() {
       <ListaNotas
         proyectoId={proyecto.id}
         estadoProyecto={proyecto.estado}
+        notasIniciales={notas}
       />
 
       {/* Modal de cambio de estado */}

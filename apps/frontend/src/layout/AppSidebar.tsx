@@ -8,7 +8,6 @@ import {
   ListIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
-import SidebarWidget from "./SidebarWidget";
 
 type NavItem = {
   name: string;
@@ -243,28 +242,22 @@ const AppSidebar: React.FC = () => {
       >
         <Link to="/">
           {isExpanded || isHovered || isMobileOpen ? (
-            <>
+            <div className="flex items-center gap-2">
+              {/* Logo C&B Consulting */}
               <img
-                className="dark:hidden"
-                src="/images/logo/logo.svg"
-                alt="Logo"
-                width={150}
-                height={40}
+                src="https://srrhhmx.s-ul.eu/BgmSpQcc"
+                alt="C&B Consulting"
+                className="h-8 w-auto"
               />
-              <img
-                className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
-                alt="Logo"
-                width={150}
-                height={40}
-              />
-            </>
+              <span className="font-semibold text-gray-900 dark:text-white">
+                C&B Consulting
+              </span>
+            </div>
           ) : (
             <img
-              src="/images/logo/logo-icon.svg"
-              alt="Logo"
-              width={32}
-              height={32}
+              src="https://srrhhmx.s-ul.eu/BgmSpQcc"
+              alt="C&B Consulting"
+              className="h-8 w-auto"
             />
           )}
         </Link>
@@ -290,7 +283,25 @@ const AppSidebar: React.FC = () => {
             </div>
           </div>
         </nav>
-        {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null}
+        
+        {/* Footer - Barra horizontal abajo del todo */}
+        {(isExpanded || isHovered || isMobileOpen) && (
+          <div className="mt-auto px-4 pb-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+            <a
+              href="https://www.paginaviva.net/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center text-xs text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              <img
+                src="https://srrhhmx.s-ul.eu/D2Flxfr7"
+                alt="PáginaVIVA"
+                className="h-4 w-auto mr-2"
+              />
+              <span><b>PáginaVIVA</b> Diseño • Desarrollo</span>
+            </a>
+          </div>
+        )}
       </div>
     </aside>
   );
