@@ -12,8 +12,8 @@
 import type { Env } from '../env'
 import type { TrackingContext } from '../lib/tracking'
 import { registrarEvento, registrarError, completarTracking } from '../lib/tracking'
-import { getR2Bucket, getDB, getSecretsKV } from '../env'
-import { callOpenAIResponses, formatOpenAIError } from '../lib/openai-client'
+import { getR2Bucket, getDB } from '../env'
+import { executePrompt, formatIAError } from '../lib/ia-provider'
 import type {
   EjecutarPasoConIAResult,
   EjecutarAnalisisConIAResult,
@@ -34,20 +34,6 @@ import {
 // ============================================================================
 // Helper Functions
 // ============================================================================
-
-/**
- * Get OpenAI API key from KV
- */
-async function getOpenAIKey(env: Env): Promise<string> {
-  const secretsKV = getSecretsKV(env)
-  const key = await secretsKV.get('OPENAI_API_KEY')
-  
-  if (!key) {
-    throw new Error('OPENAI_API_KEY not found in KV secrets')
-  }
-  
-  return key
-}
 
 /**
  * Validate project state allows analysis execution
@@ -73,25 +59,6 @@ export function validarDependencias(
   return requeridos.every(clave => resultados[clave] && resultados[clave].trim().length > 0)
 }
 
-/**
- * Replace placeholders in prompt template
- * Supports multiple placeholders: %%ijson%%, %%analisis-fisico%%, etc.
- */
-function reemplazarPlaceholders(
-  template: string,
-  inputs: InputsParaPaso
-): string {
-  let result = template
-  
-  for (const [placeholder, value] of Object.entries(inputs)) {
-    // Escape value for JSON string
-    const escapedValue = JSON.stringify(value).slice(1, -1)
-    result = result.replace(new RegExp(`%%${placeholder}%%`, 'g'), escapedValue)
-  }
-  
-  return result
-}
-
 // ============================================================================
 // Step Execution Functions
 // ============================================================================
@@ -111,53 +78,30 @@ export async function ejecutarPasoConIA(
   inputs: InputsParaPaso,
   tracking: TrackingContext
 ): Promise<EjecutarPasoConIAResult> {
-  const r2Bucket = getR2Bucket(env)
-  
   try {
-    // 1. Load prompt from R2
-    registrarEvento(tracking, `cargar-prompt-${promptNombre}`, 'INFO', `Cargando prompt desde R2: ${promptNombre}`)
-    
-    const promptKey = `prompts-ia/${promptNombre}`
-    const promptObject = await r2Bucket.get(promptKey)
-    
-    if (!promptObject) {
-      registrarError(tracking, `prompt-not-found-${promptNombre}`, new Error(`Prompt no encontrado: ${promptNombre}`))
-      
-      return {
-        exito: false,
-        error_codigo: ERROR_CODES.PROMPT_NOT_FOUND,
-        error_mensaje: `Prompt no encontrado: ${promptNombre}`,
-      }
-    }
-    
-    const promptTemplate = await promptObject.text()
-    
-    // 2. Replace placeholders
-    const promptBody = reemplazarPlaceholders(promptTemplate, inputs)
-    
-    // 3. Execute prompt via OpenAI Responses API
-    registrarEvento(tracking, `ejecutar-openai-${promptNombre}`, 'INFO', 'Ejecutando prompt con OpenAI')
-    
-    const openAIKey = await getOpenAIKey(env)
-    const result = await callOpenAIResponses(
-      openAIKey,
-      JSON.parse(promptBody),
-      tracking
-    )
-    
-    // 4. Extract text content
+    registrarEvento(tracking, `ejecutar-ia-${promptNombre}`, 'INFO', `Ejecutando prompt con IA: ${promptNombre}`)
+
+    // Build inputs Record for the provider
+    const inputMap: Record<string, string> = { ijson: inputs.ijson }
+    if (inputs['analisis-fisico']) inputMap['analisis-fisico'] = inputs['analisis-fisico']
+    if (inputs['analisis-estrategico']) inputMap['analisis-estrategico'] = inputs['analisis-estrategico']
+    if (inputs['analisis-financiero']) inputMap['analisis-financiero'] = inputs['analisis-financiero']
+    if (inputs['analisis-regulatorio']) inputMap['analisis-regulatorio'] = inputs['analisis-regulatorio']
+
+    // Execute via provider registry
+    const result = await executePrompt(env, promptNombre, inputMap, tracking)
     const contenido = result.text.trim()
-    
+
     if (!contenido) {
       registrarError(tracking, `empty-response-${promptNombre}`, new Error('La IA no generó contenido'))
-      
+
       return {
         exito: false,
         error_codigo: ERROR_CODES.EMPTY_RESPONSE,
         error_mensaje: 'La IA no generó contenido',
       }
     }
-    
+
     registrarEvento(tracking, `paso-${promptNombre}-completado`, 'INFO', `Paso completado: ${promptNombre}`, {
       contenido_length: contenido.length,
     })
@@ -173,7 +117,7 @@ export async function ejecutarPasoConIA(
     return {
       exito: false,
       error_codigo: ERROR_CODES.OPENAI_ERROR,
-      error_mensaje: formatOpenAIError(error),
+      error_mensaje: formatIAError(error),
     }
   }
 }
@@ -372,12 +316,13 @@ export async function ejecutarAnalisisConIA(
           INSERT INTO PAI_ART_artefactos (
             ART_proyecto_id,
             ART_tipo_val_id,
+            ART_nombre,
             ART_ruta,
             ART_fecha_generacion,
             ART_activo
-          ) VALUES (?, ?, ?, ?, 1)
+          ) VALUES (?, ?, ?, ?, ?, 1)
         `)
-        .bind(proyectoId, tipoVal.VAL_id, artefacto.ruta, fechaGeneracion)
+        .bind(proyectoId, tipoVal.VAL_id, artefacto.nombre, artefacto.ruta, fechaGeneracion)
         .run()
       
       artefactosGenerados.push({

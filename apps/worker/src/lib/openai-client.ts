@@ -12,6 +12,14 @@ import type { Env } from '../env'
 
 import type { TrackingContext } from './tracking'
 import { registrarEvento, registrarError } from './tracking'
+import type { IAProvider, IAResult } from './provider-types'
+
+// ============================================================================
+// OpenAI Provider — Implements IAProvider interface
+// ============================================================================
+
+const PROMPT_PREFIX = 'prompts-ia/openaiProvider/'
+const OPENAI_API_URL = 'https://api.openai.com/v1/responses'
 
 /**
  * Prompt request structure for OpenAI Responses API
@@ -155,7 +163,7 @@ async function getOpenAIApiKey(env: Env, tracking?: TrackingContext): Promise<st
  */
 async function loadPromptFromR2(env: Env, promptName: string, tracking?: TrackingContext): Promise<string> {
   try {
-    const key = `prompts-ia/${promptName}`
+    const key = `${PROMPT_PREFIX}${promptName}`
     const object = await env.r2_binding_01.get(key)
 
     if (!object) {
@@ -282,7 +290,7 @@ export async function callOpenAIResponses(
   requestBody: PromptRequest,
   tracking?: TrackingContext,
 ): Promise<PromptResult> {
-  const url = 'https://api.openai.com/v1/responses'
+  const url = OPENAI_API_URL
 
   if (tracking) {
     registrarEvento(tracking, 'openai-http-request', 'INFO', 'Enviando HTTP POST a OpenAI', {
@@ -453,3 +461,30 @@ export function formatOpenAIError(error: unknown): string {
   }
   return String(error)
 }
+
+// ============================================================================
+// OpenAI Provider — IAProvider implementation
+// ============================================================================
+
+/**
+ * Execute a prompt via OpenAI Responses API (IAProvider-compatible signature)
+ * Wraps the existing executePrompt function.
+ */
+async function execute(
+  env: Env,
+  promptName: string,
+  inputs: Record<string, string>,
+  tracking?: TrackingContext,
+): Promise<IAResult> {
+  // executePrompt expects a single string input — for OpenAI, we use ijson
+  const inputJson = inputs.ijson || ''
+  const result = await executePrompt(env, promptName, inputJson, tracking)
+  return {
+    text: result.text,
+    raw: result.raw,
+    usage: result.usage,
+  }
+}
+
+/** OpenAI provider instance for the registry */
+export const openaiProvider: IAProvider = { name: 'openaiProvider', execute }

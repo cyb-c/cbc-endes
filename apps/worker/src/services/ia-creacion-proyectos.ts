@@ -9,7 +9,7 @@
  */
 
 import type { Env } from '../env'
-import { executePrompt, formatOpenAIError } from '../lib/openai-client'
+import { executePrompt, formatIAError } from '../lib/ia-provider'
 import type { TrackingContext } from '../lib/tracking'
 import { registrarEvento, registrarError } from '../lib/tracking'
 
@@ -58,7 +58,7 @@ export async function crearProyectoConIA(
       prompt: '00_CrearProyecto.json',
     })
     
-    const result = await executePrompt(env, '00_CrearProyecto.json', ijson, tracking)
+    const result = await executePrompt(env, '00_CrearProyecto.json', { ijson }, tracking)
     
     registrarEvento(tracking, 'ia-prompt-completado', 'INFO', 'Prompt ejecutado correctamente', {
       response_length: result.text?.length || 0,
@@ -126,7 +126,7 @@ export async function crearProyectoConIA(
       ijson_preview: ijson.substring(0, 200),
     })
     
-    const errorMessage = formatOpenAIError(error)
+    const errorMessage = formatIAError(error)
     
     // Clasificar error para manejo apropiado
     const classifiedError = error as Error & { type?: string; retryable?: boolean }
