@@ -16,6 +16,7 @@ import { insertPipelineEvent, getEntityEvents } from '../lib/pipeline-events'
 import { deleteProjectFolder } from '../lib/r2-storage'
 import type { Env } from '../env'
 import { iniciarTracking, completarTracking, generarLogJSON, registrarEvento, registrarError } from '../lib/tracking'
+import { MAPEO_ARCHIVOS, type PasoAnalisisClave } from '../types/analisis'
 
 type AppBindings = {
   db_binding_01: D1Database
@@ -1177,23 +1178,15 @@ export async function handleObtenerContenidoArtefactoPorTipo(c: AppContext): Pro
 
     const cii = proyecto.cii as string
 
-    // Mapear tipo a nombre de archivo
-    const archivoMap: Record<string, string> = {
-      'analisis-fisico': `${cii}_01_activo_fisico.md`,
-      'analisis-estrategico': `${cii}_02_activo_estrategico.md`,
-      'analisis-financiero': `${cii}_03_activo_financiero.md`,
-      'analisis-regulatorio': `${cii}_04_activo_regulatorio.md`,
-      'inversor': `${cii}_05_inversor.md`,
-      'emprendedor-operador': `${cii}_06_emprendedor_operador.md`,
-      'propietario': `${cii}_07_propietario.md`,
-    }
+    // Usar MAPEO_ARCHIVOS como fuente única de verdad (evita duplicación)
+    const claveAnalisis = tipoParam as PasoAnalisisClave
+    const plantillaArchivo = MAPEO_ARCHIVOS[claveAnalisis]
 
-    const archivoNombre = archivoMap[tipoParam]
-
-    if (!archivoNombre) {
+    if (!plantillaArchivo) {
       return c.json({ error: `Tipo de artefacto no válido: ${tipoParam}` }, 400)
     }
 
+    const archivoNombre = plantillaArchivo.replace('{cii}', cii)
     const rutaR2 = `analisis-inmuebles/${cii}/${archivoNombre}`
 
     // Obtener contenido desde R2
